@@ -1,0 +1,7 @@
+lease 10.160.23.253 {
+  starts 1 2016/01/11 18:31:21;
+  ends 1 2016/02/08 18:38:01;
+  tstp 1 2016/02/08 18:38:01;
+  binding state free;
+  hardware ethernet 00:02:80:05:3e:9a;
+}

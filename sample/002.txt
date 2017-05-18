@@ -1,0 +1,9 @@
+lease 10.102.18.226 {
+  starts 4 2017/05/18 05:40:43;
+  ends 5 2017/05/19 00:40:43;
+  binding state active;
+  next binding state free;
+  hardware ethernet 00:02:a1:23:03:80;
+  uid "\001\000\002\241#\003\200";
+}
+
