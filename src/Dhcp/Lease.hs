@@ -98,7 +98,7 @@ parserLeases = go id
       Just c -> if c == '#'
         then comment >> go diffList
         else do
-          lease <- parserLease
+          lease <- parser
           go ((lease :) . diffList)
 
 comment :: AB.Parser ()
@@ -215,4 +215,4 @@ parserTime = do
   return (datetimeToTime dt)
 
 decodeLeases :: LB.ByteString -> Maybe [Lease]
-decodeLeases = ALB.maybeResult . ALB.parse (parser <* AB.endOfInput)
+decodeLeases = ALB.maybeResult . ALB.parse (parserLeases <* AB.endOfInput)
