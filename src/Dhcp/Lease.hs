@@ -22,7 +22,7 @@ import Data.Functor
 import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Net.Types
-import Chronos (parser_YmdHMS, datetimeToTime)
+import Chronos (parserUtf8_YmdHMS, datetimeToTime)
 import Chronos.Types
 
 data Lease = Lease 
@@ -69,7 +69,7 @@ parser :: AB.Parser Lease
 parser = do
   _ <- AB.string "lease"
   AB.skipSpace
-  ip <- I4.parser
+  ip <- I4.parserUtf8
   AB.skipSpace
   _ <- AB.char '{'
   AB.skipSpace
@@ -175,7 +175,7 @@ parserHardware = Hardware
           Right name -> return name
       ) 
   <*  AB.anyChar
-  <*> Mac.parserWith (MacCodec (MacGroupingPairs ':') False)
+  <*> Mac.parserWithUtf8 (MacCodec (MacGroupingPairs ':') False)
 
 parserBindingState :: AB.Parser BindingState
 parserBindingState =
@@ -186,7 +186,7 @@ parserTime :: AB.Parser Time
 parserTime = do
   _ <- AB.decimal :: AB.Parser Int
   AB.skipSpace
-  dt <- parser_YmdHMS (DatetimeFormat (Just '/') (Just ' ') (Just ':'))
+  dt <- parserUtf8_YmdHMS (DatetimeFormat (Just '/') (Just ' ') (Just ':'))
   return (datetimeToTime dt)
   
 
