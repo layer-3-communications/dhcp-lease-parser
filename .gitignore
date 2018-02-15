@@ -1,3 +1,4 @@
+result*
 *.aux
 cabal-dev
 .cabal-sandbox

@@ -29,7 +29,8 @@ let
 
     {
       mkDerivation = args: super.mkDerivation (args // {
-        doCheck = pkgs.lib.elem args.pname [ "dhcp-lease-parser" ]; 
+        doCheck = false;
+        #pkgs.lib.elem args.pname [ "dhcp-lease-parser" ]; 
         doHaddock = false;
       });
       

@@ -6,13 +6,16 @@ module Dhcp.Lease
   , Hardware(..)
   , BindingState(..)
   , parser
+  , decodeLeases 
   ) where
 
 import qualified Data.Attoparsec.ByteString.Char8 as AB
 import qualified Data.Attoparsec.ByteString as ABB
+import qualified Data.Attoparsec.ByteString.Lazy as ALB
 import qualified Net.IPv4 as I4
 import qualified Net.Mac as Mac
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.Char8 as BC
 import Data.Char (ord,chr)
 import Data.Text.Encoding (decodeUtf8')
@@ -189,6 +192,7 @@ parserTime = do
   dt <- parserUtf8_YmdHMS (DatetimeFormat (Just '/') (Just ' ') (Just ':'))
   return (datetimeToTime dt)
   
-
+decodeLeases :: LB.ByteString -> Maybe Lease
+decodeLeases = ALB.maybeResult . ALB.parse (parser <* AB.endOfInput)
 
 
