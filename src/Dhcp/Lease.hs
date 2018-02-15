@@ -84,6 +84,28 @@ parser = do
   vals <- go []
   return (Lease ip vals)
 
+-- | Parse as many leases as possible. Also,
+--   strip comments at the start of the input and between
+--   leases.
+parserLeases :: AB.Parser [Lease]
+parserLeases = go id
+  where
+  go :: ([Lease] -> [Lease]) -> AB.Parser [Lease]
+  go diffList = do
+    m <- AB.peekChar
+    case m of
+      Nothing -> return (diffList [])
+      Just c -> if c == '#'
+        then comment >> go diffList
+        else do
+          lease <- parserLease
+          go ((lease :) . diffList)
+
+comment :: AB.Parser ()
+comment = do
+  _ <- AB.takeTill (== '\n')
+  AB.skipSpace
+
 parserValue :: AB.Parser NextValue
 parserValue = do
   nname <- (AB.string "starts" $> NextNamePresent NameStarts)
@@ -191,8 +213,6 @@ parserTime = do
   AB.skipSpace
   dt <- parserUtf8_YmdHMS (DatetimeFormat (Just '/') (Just ' ') (Just ':'))
   return (datetimeToTime dt)
-  
-decodeLeases :: LB.ByteString -> Maybe Lease
+
+decodeLeases :: LB.ByteString -> Maybe [Lease]
 decodeLeases = ALB.maybeResult . ALB.parse (parser <* AB.endOfInput)
-
-
