@@ -22,7 +22,7 @@ import Data.Functor
 import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Net.Types
-import Chronos (parser_YmdHMS, fromDatetime)
+import Chronos (parser_YmdHMS, datetimeToTime)
 import Chronos.Types
 
 data Lease = Lease 
@@ -31,11 +31,11 @@ data Lease = Lease
   } deriving (Show,Read)
 
 data Value 
-  = ValueStarts !PosixTime
-  | ValueEnds !PosixTime
-  | ValueTstp !PosixTime
-  | ValueAtsfp !PosixTime
-  | ValueCltt !PosixTime
+  = ValueStarts !Time
+  | ValueEnds !Time
+  | ValueTstp !Time
+  | ValueAtsfp !Time
+  | ValueCltt !Time
   | ValueBindingState !BindingState
   | ValueNextBindingState !BindingState
   | ValueHardware !Hardware
@@ -182,12 +182,12 @@ parserBindingState =
       (AB.string "active" $> BindingStateActive)
   <|> (AB.string "free" $> BindingStateFree)
 
-parserTime :: AB.Parser PosixTime
+parserTime :: AB.Parser Time
 parserTime = do
   _ <- AB.decimal :: AB.Parser Int
   AB.skipSpace
   dt <- parser_YmdHMS (DatetimeFormat (Just '/') (Just ' ') (Just ':'))
-  return (fromDatetime dt)
+  return (datetimeToTime dt)
   
 
 
