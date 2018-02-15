@@ -10,8 +10,8 @@ module Dhcp.Lease
 
 import qualified Data.Attoparsec.ByteString.Char8 as AB
 import qualified Data.Attoparsec.ByteString as ABB
-import qualified Net.IPv4.ByteString.Char8 as IP
-import qualified Net.Mac.ByteString.Char8 as Mac
+import qualified Net.IPv4 as I4
+import qualified Net.Mac as Mac
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import Data.Char (ord,chr)
@@ -22,8 +22,7 @@ import Data.Functor
 import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Net.Types
-import Chronos.Datetime.ByteString.Char7 (parser_YmdHMS)
-import Chronos.Posix (fromDatetime)
+import Chronos (parser_YmdHMS, fromDatetime)
 import Chronos.Types
 
 data Lease = Lease 
@@ -70,7 +69,7 @@ parser :: AB.Parser Lease
 parser = do
   _ <- AB.string "lease"
   AB.skipSpace
-  ip <- IP.parser
+  ip <- I4.parser
   AB.skipSpace
   _ <- AB.char '{'
   AB.skipSpace
