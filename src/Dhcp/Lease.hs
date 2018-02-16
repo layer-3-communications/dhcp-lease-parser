@@ -6,13 +6,16 @@ module Dhcp.Lease
   , Hardware(..)
   , BindingState(..)
   , parser
+  , decodeLeases 
   ) where
 
 import qualified Data.Attoparsec.ByteString.Char8 as AB
 import qualified Data.Attoparsec.ByteString as ABB
-import qualified Net.IPv4.ByteString.Char8 as IP
-import qualified Net.Mac.ByteString.Char8 as Mac
+import qualified Data.Attoparsec.ByteString.Lazy as ALB
+import qualified Net.IPv4 as I4
+import qualified Net.Mac as Mac
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.Char8 as BC
 import Data.Char (ord,chr)
 import Data.Text.Encoding (decodeUtf8')
@@ -22,8 +25,7 @@ import Data.Functor
 import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Net.Types
-import Chronos.Datetime.ByteString.Char7 (parser_YmdHMS)
-import Chronos.Posix (fromDatetime)
+import Chronos (parserUtf8_YmdHMS, datetimeToTime)
 import Chronos.Types
 
 data Lease = Lease 
@@ -32,11 +34,11 @@ data Lease = Lease
   } deriving (Show,Read)
 
 data Value 
-  = ValueStarts !PosixTime
-  | ValueEnds !PosixTime
-  | ValueTstp !PosixTime
-  | ValueAtsfp !PosixTime
-  | ValueCltt !PosixTime
+  = ValueStarts !Time
+  | ValueEnds !Time
+  | ValueTstp !Time
+  | ValueAtsfp !Time
+  | ValueCltt !Time
   | ValueBindingState !BindingState
   | ValueNextBindingState !BindingState
   | ValueHardware !Hardware
@@ -70,7 +72,7 @@ parser :: AB.Parser Lease
 parser = do
   _ <- AB.string "lease"
   AB.skipSpace
-  ip <- IP.parser
+  ip <- I4.parserUtf8
   AB.skipSpace
   _ <- AB.char '{'
   AB.skipSpace
@@ -81,6 +83,28 @@ parser = do
           NextValuePresent v -> go (v : vs)
   vals <- go []
   return (Lease ip vals)
+
+-- | Parse as many leases as possible. Also,
+--   strip comments at the start of the input and between
+--   leases.
+parserLeases :: AB.Parser [Lease]
+parserLeases = go id
+  where
+  go :: ([Lease] -> [Lease]) -> AB.Parser [Lease]
+  go diffList = do
+    m <- AB.peekChar
+    case m of
+      Nothing -> return (diffList [])
+      Just c -> if c == '#'
+        then comment >> go diffList
+        else do
+          lease <- parser
+          go ((lease :) . diffList)
+
+comment :: AB.Parser ()
+comment = do
+  _ <- AB.takeTill (== '\n')
+  AB.skipSpace
 
 parserValue :: AB.Parser NextValue
 parserValue = do
@@ -176,20 +200,19 @@ parserHardware = Hardware
           Right name -> return name
       ) 
   <*  AB.anyChar
-  <*> Mac.parserWith (MacCodec (MacGroupingPairs ':') False)
+  <*> Mac.parserWithUtf8 (MacCodec (MacGroupingPairs ':') False)
 
 parserBindingState :: AB.Parser BindingState
 parserBindingState =
       (AB.string "active" $> BindingStateActive)
   <|> (AB.string "free" $> BindingStateFree)
 
-parserTime :: AB.Parser PosixTime
+parserTime :: AB.Parser Time
 parserTime = do
   _ <- AB.decimal :: AB.Parser Int
   AB.skipSpace
-  dt <- parser_YmdHMS (DatetimeFormat (Just '/') (Just ' ') (Just ':'))
-  return (fromDatetime dt)
-  
+  dt <- parserUtf8_YmdHMS (DatetimeFormat (Just '/') (Just ' ') (Just ':'))
+  return (datetimeToTime dt)
 
-
-
+decodeLeases :: LB.ByteString -> Maybe [Lease]
+decodeLeases = ALB.maybeResult . ALB.parse (parserLeases <* AB.endOfInput)
