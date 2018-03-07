@@ -1,13 +1,12 @@
 { package ? "dhcp-lease-parser", compiler ? "ghc822" }:
-let
-  fetchNixpkgs = import ./nix/fetchNixpkgs.nix;
-  nixpkgs = fetchNixpkgs {
-    rev = "01705125314fa0c7753f27c3dd7c4bfbda55c375"; 
-    sha256 = "1a96vb4hlhnadm445lifq02wg2vz0a2hyxrcl6d0jy2cn7427aq6"; 
-  };
-  pkgs = import nixpkgs { config = {}; };
-  inherit (pkgs) haskell;
-
+let fetchNixpkgs = import ./nix/fetchNixpkgs.nix;
+    nixpkgs = fetchNixpkgs {
+      rev = "eb857611378576f96022867a9fd15a7a841e518c";
+      sha256 = "02ddlyc2i9l96hsm3l2g02vrv7ljl4h5vbnqfq4p2xvm6zb5v0q6";
+      sha256unpacked = "02ddlyc2i9l96hsm3l2g02vrv7ljl4h5vbnqfq4p2xvm6zb5v0q6";
+    };
+    pkgs = import nixpkgs { config = {}; overlays = []; };
+    inherit (pkgs) haskell;
   
   filterPredicate = p: type:
     let path = baseNameOf p; in !(
@@ -29,8 +28,7 @@ let
 
     {
       mkDerivation = args: super.mkDerivation (args // {
-        doCheck = false;
-        #pkgs.lib.elem args.pname [ "dhcp-lease-parser" ]; 
+        doCheck = pkgs.lib.elem args.pname [ "dhcp-lease-parser" ]; 
         doHaddock = false;
       });
       
