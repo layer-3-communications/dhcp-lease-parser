@@ -43,31 +43,17 @@ parser = do
         AB.skipSpace
         _ <- AB.char '{'
         AB.skipSpace
-        let go vs = do
-              nv <- parserValue
-              case nv of
-                NextValueAbsent -> pure vs
-                NextValuePresent v -> go (v : vs)
         vals <- go []
         pure (Lease ip vals)
-
--- | Parse as many leases as possible. Also,
---   strip comments at the start of the input and between
---   leases.
-parserLeases :: BCParser [Lease]
-parserLeases = go id
   where
-  go :: ([Lease] -> [Lease]) -> BCParser [Lease]
-  go diffList = do
-    m <- AB.peekChar
-    case m of
-      Nothing -> pure (diffList [])
-      Just c -> if c == '#'
-        then comment >> go diffList
-        else do
-          lease <- parser
-          go ((lease :) . diffList)
+    go :: [Value] -> BCParser [Value]
+    go vs = do
+      nv <- parserValue
+      case nv of
+        NextValueAbsent -> pure vs
+        NextValuePresent v -> go (v : vs)
 
+   
 comment :: BCParser ()
 comment = do
   _ <- AB.takeTill (== '\n')
@@ -101,7 +87,8 @@ parserValue = do
         NameBindingState -> ValueBindingState <$> parserBindingState
         NameNextBindingState -> ValueNextBindingState <$> parserBindingState
         NameHardware -> ValueHardware <$> parserHardware
-        NameUid -> ValueUid <$> parserUid
+        NameUid -> pure $ ValueUid B.empty
+        --ValueUid <$> parserUid
         NameClientHostname -> ValueClientHostname <$> parserClientHostname
       AB.skipSpace
       _ <- AB.char ';'
@@ -198,5 +185,22 @@ debug psr bs xs i = case ALB.parse psr bs of
 
 decodeLeases :: LazyByteString -> Either String [Lease]
 decodeLeases bs = debug parser bs [] 0 
+
+-- | Parse as many leases as possible. Also,
+--   strip comments at the start of the input and between
+--   leases.
+parserLeases :: BCParser [Lease]
+parserLeases = go id
+  where
+  go :: ([Lease] -> [Lease]) -> BCParser [Lease]
+  go diffList = do
+    m <- AB.peekChar
+    case m of
+      Nothing -> pure (diffList [])
+      Just c -> if c == '#'
+        then comment >> go diffList
+        else do
+          lease <- parser
+          go ((lease :) . diffList)
 
 --ALB.maybeResult . ALB.parse (parserLeases <* AB.endOfInput)
