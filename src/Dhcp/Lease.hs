@@ -8,6 +8,7 @@ module Dhcp.Lease
   , decodeLeases 
   ) where
 
+import Data.Attoparsec.ByteString ((<?>))
 import qualified Data.Attoparsec.ByteString.Char8 as AB
 import qualified Data.Attoparsec.ByteString.Lazy as ALB
 --import qualified Data.ByteString.Utf8 as BUtf8
@@ -62,10 +63,10 @@ parserValue :: BCParser NextValue
 parserValue = do
   nname
      <- (AB.string "starts" $> NextNamePresent NameStarts)
-    <|> (AB.string "ends" $> NextNamePresent NameEnds)
-    <|> (AB.string "tstp" $> NextNamePresent NameTstp)
-    <|> (AB.string "atsfp" $> NextNamePresent NameAtsfp)
-    <|> (AB.string "cltt" $> NextNamePresent NameCltt)
+    <|> (AB.string "ends"   $> NextNamePresent NameEnds)
+    <|> (AB.string "tstp"   $> NextNamePresent NameTstp)
+    <|> (AB.string "atsfp"  $> NextNamePresent NameAtsfp)
+    <|> (AB.string "cltt"   $> NextNamePresent NameCltt)
     <|> (AB.string "binding state" $> NextNamePresent NameBindingState)
     <|> (AB.string "next binding state" $> NextNamePresent NameNextBindingState)
     <|> (AB.string "hardware" $> NextNamePresent NameHardware)
@@ -79,20 +80,20 @@ parserValue = do
     NextNamePresent name -> do
       AB.skipSpace
       value <- case name of
-        NameStarts -> ValueStarts <$> (parserTime <* semicolon)
-        NameEnds   -> ValueEnds   <$> (parserTime <* semicolon)
-        NameTstp   -> ValueTstp   <$> (parserTime <* semicolon)
-        NameAtsfp  -> ValueAtsfp  <$> (parserTime <* semicolon)
-        NameCltt   -> ValueCltt   <$> (parserTime <* semicolon)
+        NameStarts -> ValueStarts <$> ((parserTime <* semicolon) <?> "starts error")
+        NameEnds   -> ValueEnds   <$> ((parserTime <* semicolon) <?> "ends error")
+        NameTstp   -> ValueTstp   <$> ((parserTime <* semicolon) <?> "tstp error")
+        NameAtsfp  -> ValueAtsfp  <$> ((parserTime <* semicolon) <?> "atsfp error")
+        NameCltt   -> ValueCltt   <$> ((parserTime <* semicolon) <?> "namecltt error")
         NameBindingState
-                   -> ValueBindingState     <$> (parserBindingState <* semicolon)
+                   -> ValueBindingState     <$> ((parserBindingState <* semicolon) <?> "binding state error")
         NameNextBindingState
-                   -> ValueNextBindingState <$> (parserBindingState <* semicolon)
+                   -> ValueNextBindingState <$> ((parserBindingState <* semicolon) <?> "next binding state error")
         NameHardware
-                   -> ValueHardware         <$> (parserHardware     <* semicolon)
-        NameUid    -> ValueUid              <$> skipUid 
+                   -> ValueHardware         <$> ((parserHardware     <* semicolon) <?> "hardware error")
+        NameUid    -> ValueUid              <$> (skipUid <?> "uid error") 
         NameClientHostname
-                   -> ValueClientHostname   <$> (parserClientHostname <* semicolon)
+                   -> ValueClientHostname   <$> ((parserClientHostname <* semicolon) <?> "hostname error")
       AB.skipSpace
       AB.skipSpace
       pure (NextValuePresent value)
@@ -175,7 +176,7 @@ parserHardware = Hardware
 parserBindingState :: BCParser BindingState
 parserBindingState =
       (AB.string "active" $> BindingStateActive)
-  <|> (AB.string "free" $> BindingStateFree)
+  <|> (AB.string "free"   $> BindingStateFree)
 
 parserTime :: BCParser Time
 parserTime = do
