@@ -27,6 +27,7 @@ import Data.Text (Text)
 import Net.Types
 import Chronos (parserUtf8_YmdHMS, datetimeToTime)
 import Chronos.Types
+import Prelude hiding (rem)
 
 parser :: BCParser Lease
 parser = do
@@ -101,7 +102,7 @@ parserValue = do
       AB.skipSpace
       pure (NextValuePresent value)
 
--- | This doesn't actually work yet. It doesn't espace octal codes.
+-- | This doesn't actually work yet. It doesn't escape octal codes.
 parserUid :: BCParser ByteString
 parserUid = do
   isMac <- (AB.char '"' $> False ) <|> pure True
@@ -172,5 +173,12 @@ parserTime = do
   dt <- parserUtf8_YmdHMS (DatetimeFormat (Just '/') (Just ' ') (Just ':'))
   pure (datetimeToTime dt)
 
-decodeLeases :: LB.ByteString -> Maybe [Lease]
-decodeLeases = ALB.maybeResult . ALB.parse (parserLeases <* AB.endOfInput)
+debug :: BCParser [Lease] -> LazyByteString -> [Lease] -> Int -> Either String [Lease]
+debug psr bs xs i = case ALB.parse psr bs of
+  ALB.Fail _ _ _ -> Left $ "failed at " ++ (show i)
+  ALB.Done rem r -> debug psr rem (xs ++ r) (i + 1)
+
+decodeLeases :: LazyByteString -> Either String [Lease]
+decodeLeases bs = debug parserLeases bs [] 0 
+
+--ALB.maybeResult . ALB.parse (parserLeases <* AB.endOfInput)
