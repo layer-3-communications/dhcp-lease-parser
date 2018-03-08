@@ -61,7 +61,8 @@ comment = do
 
 parserValue :: BCParser NextValue
 parserValue = do
-  nname <- (AB.string "starts" $> NextNamePresent NameStarts)
+  nname
+     <- (AB.string "starts" $> NextNamePresent NameStarts)
     <|> (AB.string "ends" $> NextNamePresent NameEnds)
     <|> (AB.string "tstp" $> NextNamePresent NameTstp)
     <|> (AB.string "atsfp" $> NextNamePresent NameAtsfp)
@@ -79,23 +80,28 @@ parserValue = do
     NextNamePresent name -> do
       AB.skipSpace
       value <- case name of
-        NameStarts -> ValueStarts <$> parserTime
-        NameEnds   -> ValueEnds <$> parserTime
-        NameTstp   -> ValueTstp <$> parserTime
-        NameAtsfp  -> ValueAtsfp <$> parserTime
-        NameCltt   -> ValueCltt <$> parserTime
+        NameStarts -> ValueStarts <$> skipTime --parserTime
+        NameEnds   -> ValueEnds   <$> skipTime --parserTime
+        NameTstp   -> ValueTstp   <$> skipTime --parserTime
+        NameAtsfp  -> ValueAtsfp  <$> skipTime --parserTime
+        NameCltt   -> ValueCltt   <$> skipTime --parserTime
         NameBindingState -> ValueBindingState <$> parserBindingState
         NameNextBindingState -> ValueNextBindingState <$> parserBindingState
         NameHardware -> ValueHardware <$> parserHardware
-        NameUid -> ValueUid <$> skipUid
+        NameUid -> ValueUid <$> skipField   
         NameClientHostname -> ValueClientHostname <$> parserClientHostname
       AB.skipSpace
       _ <- AB.char ';'
       AB.skipSpace
       pure (NextValuePresent value)
 
-skipUid :: BCParser ByteString
-skipUid = do
+skipTime :: BCParser Time
+skipTime = do
+  _ <- AB.takeTill (== ';')
+  pure (Time 0)
+
+skipField :: BCParser ByteString
+skipField = do
   _ <- AB.takeTill (== ';')
   pure B.empty
 
