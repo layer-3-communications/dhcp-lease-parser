@@ -31,19 +31,25 @@ import Prelude hiding (rem)
 
 parser :: BCParser Lease
 parser = do
-  _ <- AB.string "lease"
-  AB.skipSpace
-  ip <- I4.parserUtf8
-  AB.skipSpace
-  _ <- AB.char '{'
-  AB.skipSpace
-  let go vs = do
-        nv <- parserValue
-        case nv of
-          NextValueAbsent -> pure vs
-          NextValuePresent v -> go (v : vs)
-  vals <- go []
-  pure (Lease ip vals)
+  m <- AB.peekChar
+  case m of
+    Nothing -> pure $ Lease I4.any []
+    Just c  -> if c == '#'
+      then comment >> parser
+      else do 
+        _ <- AB.string "lease"
+        AB.skipSpace
+        ip <- I4.parserUtf8
+        AB.skipSpace
+        _ <- AB.char '{'
+        AB.skipSpace
+        let go vs = do
+              nv <- parserValue
+              case nv of
+                NextValueAbsent -> pure vs
+                NextValuePresent v -> go (v : vs)
+        vals <- go []
+        pure (Lease ip vals)
 
 -- | Parse as many leases as possible. Also,
 --   strip comments at the start of the input and between
@@ -173,12 +179,12 @@ parserTime = do
   dt <- parserUtf8_YmdHMS (DatetimeFormat (Just '/') (Just ' ') (Just ':'))
   pure (datetimeToTime dt)
 
-debug :: BCParser [Lease] -> LazyByteString -> [Lease] -> Int -> Either String [Lease]
+debug :: BCParser a -> LazyByteString -> [a] -> Int -> Either String [a]
 debug psr bs xs i = case ALB.parse psr bs of
   ALB.Fail _ _ _ -> Left $ "failed at " ++ (show i)
-  ALB.Done rem r -> debug psr rem (xs ++ r) (i + 1)
+  ALB.Done rem r -> debug psr rem (r : xs) (i + 1)
 
 decodeLeases :: LazyByteString -> Either String [Lease]
-decodeLeases bs = debug parserLeases bs [] 0 
+decodeLeases bs = debug parser bs [] 0 
 
 --ALB.maybeResult . ALB.parse (parserLeases <* AB.endOfInput)
