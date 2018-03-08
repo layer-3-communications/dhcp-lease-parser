@@ -1,9 +1,12 @@
-LeaseWrap (Lease {leaseIp = ipv4 10 160 22 225,
-leaseValues = [ValueClientHostname "000280043B39",
+LeaseWrap
+(Lease {
+leaseIp = ipv4 10 153 2 77,
+leaseValues = [ValueClientHostname "000280045079",
 ValueUid "",
 ValueHardware (Hardware {hardwareType = "ethernet",
-hardwareMac = mac 0x000280043b39}),
-ValueNextBindingState BindingStateFree,
-ValueBindingState BindingStateActive,
-ValueEnds (Time {getTime = 1521676779000000000}),
-ValueStarts (Time {getTime = 1519257179000000000})]})
+hardwareMac = mac 0x000000000000}),
+ValueBindingState BindingStateFree,
+ValueTstp (Time {getTime = 1451465424000000000}),
+ValueEnds (Time {getTime = 1451465424000000000}),
+ValueStarts (Time {getTime = 1451465304000000000})]
+})

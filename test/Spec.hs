@@ -79,7 +79,16 @@ unitTests = testGroup "Unit tests"
       , ValueUid ""
       , ValueClientHostname "000280041D7F"
       ]
-  
+  , testCase "007" $ oneLease "sample/007.txt" $ Lease
+      (IPv4.fromOctets 10 153 2 77)
+      [ ValueStarts $ Chronos.timeFromYmdhms 2015 12 30 8 48 24
+      , ValueEnds   $ Chronos.timeFromYmdhms 2015 12 30 8 50 24
+      , ValueTstp   $ Chronos.timeFromYmdhms 2015 12 30 8 50 24
+      , ValueBindingState BindingStateFree
+      , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0 0 0 0 0 0
+      , ValueUid ""
+      , ValueClientHostname "000280045079"
+      ]
   ]
 
 oneLease :: String -> Lease -> Assertion
@@ -98,4 +107,3 @@ instance Eq LeaseWrap where
 leaseEq :: Lease -> Lease -> Bool
 leaseEq (Lease ipA valsA) (Lease ipB valsB) =
   ipA == ipB && L.sort valsA == L.sort valsB
-

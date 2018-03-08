@@ -1,0 +1,11 @@
+# 00:02:80:04;
+
+lease 10.153.2.77 {
+  starts 3 2015/12/30 08:48:24;
+  ends 3 2015/12/30 08:50:24;
+  tstp 3 2015/12/30 08:50:24;
+  binding state free;
+  hardware ethernet 00:00:00:00:00:00;
+  uid "";
+  client-hostname "000280045079";
+}
