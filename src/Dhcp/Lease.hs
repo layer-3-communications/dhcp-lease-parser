@@ -53,7 +53,6 @@ parser = do
         NextValueAbsent -> pure vs
         NextValuePresent v -> go (v : vs)
 
-   
 comment :: BCParser ()
 comment = do
   _ <- AB.takeTill (== '\n')
@@ -88,23 +87,18 @@ parserValue = do
         NameBindingState -> ValueBindingState <$> parserBindingState
         NameNextBindingState -> ValueNextBindingState <$> parserBindingState
         NameHardware -> ValueHardware <$> parserHardware
-        NameUid -> ValueUid <$> skipField   
+        NameUid -> ValueUid <$> skipUid   
         NameClientHostname -> ValueClientHostname <$> parserClientHostname
       AB.skipSpace
       _ <- AB.char ';'
       AB.skipSpace
       pure (NextValuePresent value)
 
-skipTime :: BCParser Time
-skipTime = do
+skipUid :: BCParser ByteString
+skipUid = do
   _ <- AB.char '"';  
   _ <- AB.takeTill (== '"')
-  pure (Time 0)
-
-skipField :: BCParser ByteString
-skipField = do
-  _ <- AB.char '"';  
-  _ <- AB.takeTill (== '"')
+  _ <- AB.char '"'; 
   pure B.empty
 
 -- | This doesn't actually work yet. It doesn't escape octal codes.
