@@ -69,6 +69,17 @@ unitTests = testGroup "Unit tests"
       , ValueUid ""
       , ValueClientHostname "000280043B39"
       ]
+  , testCase "005" $ oneLease "sample/005.txt" $ Lease
+      (IPv4.fromOctets 10 160 22 227)
+      [ ValueStarts $ Chronos.timeFromYmdhms 2018 02 26 17 18 08
+      , ValueEnds   $ Chronos.timeFromYmdhms 2018 03 26 17 24 48
+      , ValueBindingState BindingStateActive
+      , ValueNextBindingState BindingStateFree
+      , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0x00 0x02 0x80 0x04 0x1d 0x7f
+      , ValueUid ""
+      , ValueClientHostname "000280041D7F"
+      ]
+  
   ]
 
 oneLease :: String -> Lease -> Assertion

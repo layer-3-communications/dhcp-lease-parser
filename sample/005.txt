@@ -1,0 +1,9 @@
+lease 10.160.22.227 {
+  starts 1 2018/02/26 17:18:08;
+  ends 1 2018/03/26 17:24:48;
+  binding state active;
+  next binding state free;
+  hardware ethernet 00:02:80:04:1d:7f;
+  uid "";
+  client-hostname "000280041D7F";
+}

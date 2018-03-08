@@ -79,26 +79,28 @@ parserValue = do
     NextNamePresent name -> do
       AB.skipSpace
       value <- case name of
-        NameStarts -> ValueStarts <$> parserTime
-        NameEnds   -> ValueEnds   <$> parserTime
-        NameTstp   -> ValueTstp   <$> parserTime
-        NameAtsfp  -> ValueAtsfp  <$> parserTime
-        NameCltt   -> ValueCltt   <$> parserTime
-        NameBindingState -> ValueBindingState <$> parserBindingState
-        NameNextBindingState -> ValueNextBindingState <$> parserBindingState
-        NameHardware -> ValueHardware <$> parserHardware
+        NameStarts -> ValueStarts <$> (parserTime <* semicolon)
+        NameEnds   -> ValueEnds   <$> (parserTime <* semicolon)
+        NameTstp   -> ValueTstp   <$> (parserTime <* semicolon)
+        NameAtsfp  -> ValueAtsfp  <$> (parserTime <* semicolon)
+        NameCltt   -> ValueCltt   <$> (parserTime <* semicolon)
+        NameBindingState -> ValueBindingState <$> (parserBindingState <* semicolon)
+        NameNextBindingState -> ValueNextBindingState <$> (parserBindingState <* semicolon)
+        NameHardware -> ValueHardware <$> (parserHardware <* semicolon)
         NameUid -> ValueUid <$> skipUid   
-        NameClientHostname -> ValueClientHostname <$> parserClientHostname
+        NameClientHostname -> ValueClientHostname <$> (parserClientHostname <* semicolon)
       AB.skipSpace
-      _ <- AB.char ';'
       AB.skipSpace
       pure (NextValuePresent value)
 
+semicolon :: BCParser ()
+semicolon = do
+  _ <- AB.char ';'
+  pure ()
+
 skipUid :: BCParser ByteString
 skipUid = do
-  _ <- AB.char '"';  
-  _ <- AB.takeTill (== '"')
-  _ <- AB.char '"'; 
+  _ <- AB.takeTill (== '\n')
   pure B.empty
 
 -- | This doesn't actually work yet. It doesn't escape octal codes.
