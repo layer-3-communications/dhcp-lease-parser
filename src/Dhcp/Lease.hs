@@ -80,11 +80,11 @@ parserValue = do
     NextNamePresent name -> do
       AB.skipSpace
       value <- case name of
-        NameStarts -> ValueStarts <$> skipTime --parserTime
-        NameEnds   -> ValueEnds   <$> skipTime --parserTime
-        NameTstp   -> ValueTstp   <$> skipTime --parserTime
-        NameAtsfp  -> ValueAtsfp  <$> skipTime --parserTime
-        NameCltt   -> ValueCltt   <$> skipTime --parserTime
+        NameStarts -> ValueStarts <$> parserTime
+        NameEnds   -> ValueEnds   <$> parserTime
+        NameTstp   -> ValueTstp   <$> parserTime
+        NameAtsfp  -> ValueAtsfp  <$> parserTime
+        NameCltt   -> ValueCltt   <$> parserTime
         NameBindingState -> ValueBindingState <$> parserBindingState
         NameNextBindingState -> ValueNextBindingState <$> parserBindingState
         NameHardware -> ValueHardware <$> parserHardware
@@ -94,6 +94,11 @@ parserValue = do
       _ <- AB.char ';'
       AB.skipSpace
       pure (NextValuePresent value)
+
+skipClientHS :: BCParser Text
+skipClientHS = do
+  _ <- AB.takeTill (== ';')
+  pure ""
 
 skipTime :: BCParser Time
 skipTime = do
