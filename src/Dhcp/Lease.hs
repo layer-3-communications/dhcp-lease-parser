@@ -111,7 +111,7 @@ parserValue = do
 skipUid :: BCParser ByteString
 skipUid = do
  _ <- AB.takeTill (== '\n')
- AB.skipSpace
+ --AB.skipSpace
  pure B.empty
 
 -- | This doesn't actually work yet. It doesn't escape octal codes.
