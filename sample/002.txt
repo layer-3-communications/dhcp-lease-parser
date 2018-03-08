@@ -4,6 +4,6 @@ lease 10.102.18.226 {
   binding state active;
   next binding state free;
   hardware ethernet 00:02:a1:23:03:80;
-  uid "\001\000\002\241#\003\200";
+  uid "";
 }
 

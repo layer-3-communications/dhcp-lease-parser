@@ -4,6 +4,6 @@ lease 10.152.33.140 {
   binding state active;
   next binding state free;
   hardware ethernet 00:02:80:04:30:63;
-  uid "\001\000\002\200\0040c";
+  uid "";
   client-hostname "000280043063";
 }

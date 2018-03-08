@@ -102,7 +102,8 @@ skipClientHS = do
 
 skipTime :: BCParser Time
 skipTime = do
-  _ <- AB.takeTill (== ';')
+  _ <- AB.char '"';  
+  _ <- AB.takeTill (== '"')
   pure (Time 0)
 
 skipField :: BCParser ByteString

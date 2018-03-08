@@ -1,0 +1,10 @@
+lease 10.160.22.225 {
+  starts 3 2018/02/21 23:52:59;
+  ends 3 2018/03/21 23:59:39;
+  binding state active;
+  next binding state free;
+  hardware ethernet 00:02:80:04:3b:39;
+  uid "";
+  client-hostname "000280043B39";
+}
+
