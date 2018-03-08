@@ -84,11 +84,15 @@ parserValue = do
         NameTstp   -> ValueTstp   <$> (parserTime <* semicolon)
         NameAtsfp  -> ValueAtsfp  <$> (parserTime <* semicolon)
         NameCltt   -> ValueCltt   <$> (parserTime <* semicolon)
-        NameBindingState -> ValueBindingState <$> (parserBindingState <* semicolon)
-        NameNextBindingState -> ValueNextBindingState <$> (parserBindingState <* semicolon)
-        NameHardware -> ValueHardware <$> (parserHardware <* semicolon)
-        NameUid -> ValueUid <$> skipUid   
-        NameClientHostname -> ValueClientHostname <$> (parserClientHostname <* semicolon)
+        NameBindingState
+                   -> ValueBindingState     <$> (parserBindingState <* semicolon)
+        NameNextBindingState
+                   -> ValueNextBindingState <$> (parserBindingState <* semicolon)
+        NameHardware
+                   -> ValueHardware         <$> (parserHardware     <* semicolon)
+        NameUid    -> ValueUid              <$> skipUid 
+        NameClientHostname
+                   -> ValueClientHostname   <$> (parserClientHostname <* semicolon)
       AB.skipSpace
       AB.skipSpace
       pure (NextValuePresent value)
@@ -164,7 +168,9 @@ parserHardware = Hardware
           Right name -> pure name
       ) 
   <*  AB.anyChar
-  <*> Mac.parserWithUtf8 (MacCodec (MacGroupingPairs ':') False)
+  <*> 
+    ((Mac.parserWithUtf8 (MacCodec (MacGroupingPairs ':') False))
+    <|> (pure $ Mac.fromOctets 0 0 0 0 0 0))
 
 parserBindingState :: BCParser BindingState
 parserBindingState =
