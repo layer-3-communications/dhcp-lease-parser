@@ -1,8 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BangPatterns #-}
 
-{-# OPTIONS_GHC -Wall #-}
-
 module Dhcp.Lease
   ( parser
   , decodeLeases 
@@ -187,10 +185,15 @@ parserTime = do
 
 debug :: BCParser a -> LazyByteString -> [a] -> Int -> Either String [a]
 debug psr bs xs i = case ALB.parse psr bs of
-  ALB.Fail _ _ s ->
-    Left $ "failed at input number" ++ (show i)
-      ++ ", original error message: " ++ s
+  ALB.Fail _ ss s ->
+    Left $ "failed at input number: " ++ (show i)
+      ++ "\noriginal error message: " ++ s
+      ++ "\ncontext error messages: " ++ (showStrs ss 0) 
   ALB.Done rem r -> debug psr rem (r : xs) (i + 1)
+  where
+    showStrs :: [String] -> Int -> String
+    showStrs [] _ = ""
+    showStrs (k:ks) n = "\nContext " ++ (show n) ++ " " ++ k ++ showStrs ks (n + 1)
 
 decodeLeases :: LazyByteString -> Either String [Lease]
 decodeLeases bs = debug parser bs [] 0 
