@@ -101,7 +101,7 @@ parserValue = do
         NameBindingState -> ValueBindingState <$> parserBindingState
         NameNextBindingState -> ValueNextBindingState <$> parserBindingState
         NameHardware -> ValueHardware <$> parserHardware
-        NameUid -> ValueUid <$> skipUid
+        NameUid -> ValueUid <$> parserUid
         NameClientHostname -> ValueClientHostname <$> parserClientHostname
       AB.skipSpace
       _ <- AB.char ';'
@@ -121,13 +121,17 @@ parserUid = do
   if isMac
     then AB.takeTill (\x -> not (x == ':' || (x >= '0' && x <= '9') || (x >= 'a' && x <= 'f') || (x >= 'A' && x <= 'F')))
     else do
-      let go !cs = do
-            n <- possiblyOctal
-            case n of
-              NextCharDone -> pure cs
-              NextCharAgain c -> go (c : cs)
-      chars <- go []
-      pure (B.reverse (BC.pack chars))
+    _ <- AB.takeTill (== '\n')
+    AB.skipSpace
+    pure B.empty
+    --do
+    --  let go !cs = do
+    --        n <- possiblyOctal
+    --        case n of
+    --          NextCharDone -> pure cs
+    --          NextCharAgain c -> go (c : cs)
+    --  chars <- go []
+    --  pure (B.reverse (BC.pack chars))
 
 octalErrorMessage :: String
 octalErrorMessage = "invalid octal escape sequence while parsing uid"
