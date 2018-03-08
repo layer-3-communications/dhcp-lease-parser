@@ -24,7 +24,7 @@ untracked/
 uploads/
 static/combined/
 static/tmp/
-*.swp
+*.sw*
 .virtualenv
 .stack-work/
 yesod-devel/
