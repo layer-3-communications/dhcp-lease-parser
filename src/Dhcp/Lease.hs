@@ -95,11 +95,6 @@ parserValue = do
       AB.skipSpace
       pure (NextValuePresent value)
 
-skipClientHS :: BCParser Text
-skipClientHS = do
-  _ <- AB.takeTill (== ';')
-  pure ""
-
 skipTime :: BCParser Time
 skipTime = do
   _ <- AB.char '"';  
@@ -108,7 +103,8 @@ skipTime = do
 
 skipField :: BCParser ByteString
 skipField = do
-  _ <- AB.takeTill (== ';')
+  _ <- AB.char '"';  
+  _ <- AB.takeTill (== '"')
   pure B.empty
 
 -- | This doesn't actually work yet. It doesn't escape octal codes.
