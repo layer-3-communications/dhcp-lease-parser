@@ -32,6 +32,7 @@ let fetchNixpkgs = import ./nix/fetchNixpkgs.nix;
         doHaddock = false;
       });
       
+      bytestring-encodings = cp "bytestring-encodings"; 
       dhcp-lease-parser = build "dhcp-lease-parser" ./.;
     };
   };
