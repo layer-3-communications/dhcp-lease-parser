@@ -181,7 +181,9 @@ parserTime = do
 
 debug :: BCParser a -> LazyByteString -> [a] -> Int -> Either String [a]
 debug psr bs xs i = case ALB.parse psr bs of
-  ALB.Fail failedOn _ _ -> Left $ "failed at input " ++ (show failedOn) ++ ", at input number: " ++ (show i)
+  ALB.Fail _ _ s ->
+    Left $ "failed at input number" ++ (show i)
+      ++ ", original error message: " ++ s
   ALB.Done rem r -> debug psr rem (r : xs) (i + 1)
 
 decodeLeases :: LazyByteString -> Either String [Lease]
