@@ -101,13 +101,16 @@ parserValue = do
         NameBindingState -> ValueBindingState <$> parserBindingState
         NameNextBindingState -> ValueNextBindingState <$> parserBindingState
         NameHardware -> ValueHardware <$> parserHardware
-        NameUid -> ValueUid <$> parserUid
+        NameUid -> ValueUid <$> skipUid
         NameClientHostname -> ValueClientHostname <$> parserClientHostname
       AB.skipSpace
       _ <- AB.char ';'
       AB.skipSpace
       pure (NextValuePresent value)
 
+skipUid :: BCParser ByteString
+skipUid = pure B.empty
+  
 -- | This doesn't actually work yet. It doesn't escape octal codes.
 parserUid :: BCParser ByteString
 parserUid = do
