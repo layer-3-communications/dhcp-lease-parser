@@ -80,15 +80,14 @@ parserValue = do
       AB.skipSpace
       value <- case name of
         NameStarts -> ValueStarts <$> parserTime
-        NameEnds -> ValueEnds <$> parserTime
-        NameTstp -> ValueTstp <$> parserTime
-        NameAtsfp -> ValueAtsfp <$> parserTime
-        NameCltt -> ValueCltt <$> parserTime
+        NameEnds   -> ValueEnds <$> parserTime
+        NameTstp   -> ValueTstp <$> parserTime
+        NameAtsfp  -> ValueAtsfp <$> parserTime
+        NameCltt   -> ValueCltt <$> parserTime
         NameBindingState -> ValueBindingState <$> parserBindingState
         NameNextBindingState -> ValueNextBindingState <$> parserBindingState
         NameHardware -> ValueHardware <$> parserHardware
-        NameUid -> pure $ ValueUid B.empty
-        --ValueUid <$> parserUid
+        NameUid -> ValueUid <$> skipUid
         NameClientHostname -> ValueClientHostname <$> parserClientHostname
       AB.skipSpace
       _ <- AB.char ';'
@@ -97,9 +96,8 @@ parserValue = do
 
 skipUid :: BCParser ByteString
 skipUid = do
- _ <- AB.takeTill (== '\n')
- --AB.skipSpace
- pure B.empty
+  _ <- AB.takeTill (== ';')
+  pure B.empty
 
 -- | This doesn't actually work yet. It doesn't escape octal codes.
 parserUid :: BCParser ByteString

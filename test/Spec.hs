@@ -3,6 +3,7 @@
 import Test.Tasty
 import Test.Tasty.HUnit
 import Dhcp.Lease
+import Dhcp.Types
 import Data.Monoid
 
 import qualified Data.List as L
@@ -21,7 +22,7 @@ tests = testGroup "Tests" [unitTests]
 
 unitTests :: TestTree
 unitTests = testGroup "Unit tests"
-  [ testCase "000" $ oneLease "sample/000.txt" $ Lease
+  [ testCase "000" $ oneLease "../sample/000.txt" $ Lease
       (IPv4.fromOctets 10 160 23 253)
       [ ValueStarts $ Chronos.timeFromYmdhms 2016 1 11 18 31 21
       , ValueEnds   $ Chronos.timeFromYmdhms 2016 02 08 18 38 1
@@ -29,7 +30,7 @@ unitTests = testGroup "Unit tests"
       , ValueBindingState BindingStateFree
       , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0x00 0x02 0x80 0x05 0x3E 0x9A
       ]
-  , testCase "001" $ oneLease "sample/001.txt" $ Lease
+  , testCase "001" $ oneLease "../sample/001.txt" $ Lease
       (IPv4.fromOctets 10 152 33 140)
       [ ValueStarts $ Chronos.timeFromYmdhms 2017 5 18 14 05 18
       , ValueEnds   $ Chronos.timeFromYmdhms 2017 06 15 14 11 58
@@ -39,7 +40,7 @@ unitTests = testGroup "Unit tests"
       , ValueUid $ "\o001\o000\o002\o200\o004" <> "0c"
       , ValueClientHostname "000280043063"
       ]
-  , testCase "002" $ oneLease "sample/002.txt" $ Lease
+  , testCase "002" $ oneLease "../sample/002.txt" $ Lease
       (IPv4.fromOctets 10 102 18 226)
       [ ValueStarts $ Chronos.timeFromYmdhms 2017 5 18 5 40 43
       , ValueEnds   $ Chronos.timeFromYmdhms 2017 05 19 0 40 43
@@ -48,6 +49,16 @@ unitTests = testGroup "Unit tests"
       , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0x00 0x02 0xA1 0x23 0x03 0x80
       , ValueUid "\o001\o000\o002\o241#\o003\o200"
       ]
+  , testCase "003" $ oneLease "../sample/003.txt" $ Lease
+      (IPv4.fromOctets 10 160 18 246)
+      [ ValueStarts $ Chronos.timeFromYmdhms 2016 12 16 10 17 58
+      , ValueEnds   $ Chronos.timeFromYmdhms 2017 01 13 10 24 38
+      , ValueBindingState BindingStateActive
+      , ValueNextBindingState BindingStateFree
+      , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0x00 0x02 0x80 0x04 0x00 0xc9
+      , ValueUid "\o001\o000\o002\o200\o004\o000\311"
+      ]
+
   ]
 
 oneLease :: String -> Lease -> Assertion
