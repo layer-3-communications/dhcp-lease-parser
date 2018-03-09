@@ -222,7 +222,7 @@ parserTime = do
 debug :: BCParser a -> LazyByteString -> [a] -> Int -> Either String [a]
 debug psr bs xs i = case ALB.parse psr bs of
   ALB.Fail _ ss s ->
-    Left $ "failed at lease number: " ++ (show $ (\x -> if x > 5 then x - 5 else x) i)
+    Left $ "failed at lease number: " ++ (show $ (\x -> if x > 6 then x - 6 else x) i)
       ++ "\n\t(n.b.: this number is 1-indexed)" 
       ++ "\nOriginal error message Attoparsec: " ++ s
       ++ "\nContextual error messages from Attoparsec: " ++ (showStrs ss 0)
