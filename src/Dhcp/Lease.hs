@@ -32,7 +32,7 @@ parser :: BCParser Lease
 parser = do
   m <- AB.peekChar
   case m of
-    Nothing -> pure $ Lease I4.any []
+    Nothing -> pure $ emptyLease
     Just c  -> if c == '#'
       then comment >> parser
       else do 
@@ -40,7 +40,7 @@ parser = do
         AB.skipSpace
         ip <- I4.parserUtf8
         if (notOntRange ip)
-          then pure $ Lease I4.any [] 
+          then pure $ emptyLease
           else do 
             AB.skipSpace
             _ <- AB.char '{'
@@ -54,6 +54,9 @@ parser = do
       case nv of
         NextValueAbsent -> pure vs
         NextValuePresent v -> go (v : vs)
+
+emptyLease :: Lease
+emptyLease = Lease I4.any []
 
 notOntRange :: IPv4 -> Bool
 notOntRange = not . ontRange
@@ -197,9 +200,9 @@ parserTime = do
 debug :: BCParser a -> LazyByteString -> [a] -> Int -> Either String [a]
 debug psr bs xs i = case ALB.parse psr bs of
   ALB.Fail _ ss s ->
-    Left $ "failed at input number: " ++ (show i)
-      ++ "\noriginal error message: " ++ s
-      ++ "\ncontext error messages: " ++ (showStrs ss 0) 
+    Left $ "failed at lease number: " ++ (show $ (\x -> if x > 5 then x - 5 else x) i) ++ ", \n\tplease note that this number is 1-indexed." 
+      ++ "\nOriginal error message Attoparsec: " ++ s
+      ++ "\nContextual error messages from Attoparsec: " ++ (showStrs ss 0)
   ALB.Done rem r -> debug psr rem (r : xs) (i + 1)
   where
     showStrs :: [String] -> Int -> String
@@ -207,7 +210,7 @@ debug psr bs xs i = case ALB.parse psr bs of
     showStrs (k:ks) n = "\nContext " ++ (show n) ++ " " ++ k ++ showStrs ks (n + 1)
 
 decodeLeases :: LazyByteString -> Either String [Lease]
-decodeLeases bs = debug parser bs [] 0 
+decodeLeases bs = debug parser bs [] 1 
 
 -- | Parse as many leases as possible. Also,
 --   strip comments at the start of the input and between
