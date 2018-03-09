@@ -40,7 +40,12 @@ parser = do
         AB.skipSpace
         ip <- I4.parserUtf8
         if (notOntRange ip)
-          then pure $ emptyLease
+          then do
+            AB.skipSpace
+            _ <- AB.char '{'
+            AB.skipSpace
+            skipFieldMany
+            pure $ emptyLease
           else do 
             AB.skipSpace
             _ <- AB.char '{'
@@ -54,6 +59,20 @@ parser = do
       case nv of
         NextValueAbsent -> pure vs
         NextValuePresent v -> go (v : vs)
+
+skipField :: BCParser ()
+skipField = do
+  _ <- AB.takeTill (== '\n')
+  AB.skipSpace
+
+skipFieldMany :: BCParser ()
+skipFieldMany = do
+  m <- AB.peekChar
+  case m of
+    Nothing -> pure ()
+    Just c  -> if c == '}'
+      then pure ()
+      else skipField >> skipFieldMany
 
 emptyLease :: Lease
 emptyLease = Lease I4.any []
