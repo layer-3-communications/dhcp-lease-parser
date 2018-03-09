@@ -39,11 +39,14 @@ parser = do
         _ <- AB.string "lease"
         AB.skipSpace
         ip <- I4.parserUtf8
-        AB.skipSpace
-        _ <- AB.char '{'
-        AB.skipSpace
-        vals <- go []
-        pure (Lease ip vals)
+        if (notOntRange ip)
+          then pure $ Lease I4.any [] 
+          else do 
+            AB.skipSpace
+            _ <- AB.char '{'
+            AB.skipSpace
+            vals <- go []
+            pure (Lease ip vals)
   where
     go :: [Value] -> BCParser [Value]
     go vs = do
@@ -51,6 +54,14 @@ parser = do
       case nv of
         NextValueAbsent -> pure vs
         NextValuePresent v -> go (v : vs)
+
+notOntRange :: IPv4 -> Bool
+notOntRange = not . ontRange
+
+ontRange :: IPv4 -> Bool
+ontRange a = go (I4.toOctets a)
+  where
+    go (_,x,_,_) = (x < 150 || x > 160)
 
 comment :: BCParser ()
 comment = do
