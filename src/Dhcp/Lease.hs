@@ -85,7 +85,7 @@ notOntRange = not . ontRange
 ontRange :: IPv4 -> Bool
 ontRange a = go (I4.toOctets a)
   where
-    go (_,x,_,_) = (x >= 110 || x <= 119)
+    go (_,x,_,_) = (x >= 110 && x <= 119)
     --(x < 150 || x > 160)
 
 comment :: BCParser ()

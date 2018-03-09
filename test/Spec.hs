@@ -49,16 +49,16 @@ unitTests = testGroup "Unit tests"
       , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0x00 0x02 0xA1 0x23 0x03 0x80
       , ValueUid ""
       ]
-  , testCase "003" $ oneLease "sample/003.txt" $ Lease
-      (IPv4.fromOctets 10 160 22 231)
-      [ ValueStarts $ Chronos.timeFromYmdhms 2018 02 21 23 52 59
-      , ValueEnds   $ Chronos.timeFromYmdhms 2018 03 21 23 59 39
-      , ValueBindingState BindingStateActive
-      , ValueNextBindingState BindingStateFree
-      , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0x00 0x02 0x80 0x04 0x34 0xe8
-      , ValueUid ""
-      , ValueClientHostname "0002800434E8"
-      ]
+--  , testCase "003" $ oneLease "sample/003.txt" $ Lease
+--      (IPv4.fromOctets 10 160 22 231)
+--      [ ValueStarts $ Chronos.timeFromYmdhms 2018 02 21 23 52 59
+--      , ValueEnds   $ Chronos.timeFromYmdhms 2018 03 21 23 59 39
+--      , ValueBindingState BindingStateActive
+--      , ValueNextBindingState BindingStateFree
+--      , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0x00 0x02 0x80 0x04 0x34 0xe8
+--      , ValueUid ""
+--      , ValueClientHostname "0002800434E8"
+--      ]
   , testCase "004" $ oneLease "sample/004.txt" $ Lease
       (IPv4.fromOctets 10 160 22 225)
       [ ValueStarts $ Chronos.timeFromYmdhms 2018 02 21 23 52 59
