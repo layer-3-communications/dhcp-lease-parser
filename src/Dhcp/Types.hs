@@ -17,6 +17,7 @@ module Dhcp.Types
   , CharByteString
   , StrictText
   , BCParser 
+  , DhcpStream 
   ) where
 
 import qualified Data.ByteString       as B
@@ -26,12 +27,14 @@ import qualified Data.Text             as T
 import qualified Data.Attoparsec.ByteString.Char8 as AB
 import Net.Types (IPv4, Mac)
 import Chronos.Types (Time)
+import Streaming (Of, Stream)
 
 type LazyByteString   = LB.ByteString
 type StrictByteString =  B.ByteString
 type CharByteString   = BC.ByteString
 type StrictText       =  T.Text
 type BCParser         = AB.Parser
+type DhcpStream       = Stream (Of Lease) (Either String) ()
 
 data Lease = Lease 
   { leaseIp     :: !IPv4
