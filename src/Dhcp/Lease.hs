@@ -13,6 +13,7 @@ import qualified Data.Attoparsec.ByteString.Lazy as ALB
 import qualified Net.IPv4 as I4
 import qualified Net.Mac as Mac
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy.Internal as BI
 import Chronos (parserUtf8_YmdHMS, datetimeToTime)
 import Chronos.Types
 import Control.Applicative
@@ -174,13 +175,15 @@ parserTime = do
   pure (datetimeToTime dt)
 
 debug :: BCParser a -> LazyByteString -> [a] -> Int -> Either String [a]
+--debug _ (BI.Empty) _ _ = Right []
 debug psr bs !xs !i = case ALB.parse psr bs of
   ALB.Fail _ ss s ->
     Left $ "failed at lease number: " ++ (show $ (\x -> if x > 6 then x - 6 else x) i)
       ++ "\n\t(n.b.: this number is 1-indexed)" 
       ++ "\nOriginal error message Attoparsec: " ++ s
       ++ "\nContextual error messages from Attoparsec: " ++ (showStrs ss 0)
-  ALB.Done rem r -> debug psr rem (r : xs) (i + 1)
+  ALB.Done (BI.Empty) r -> Right (r : xs) 
+  ALB.Done rem r        -> debug psr rem (r : xs) (i + 1)
   where
     showStrs :: [String] -> Int -> String
     showStrs [] _ = ""

@@ -8,11 +8,13 @@ import Data.Monoid
 
 import qualified Data.List as L
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BSL
 import qualified Net.IPv4 as IPv4
 import qualified Net.Mac as Mac
 import qualified Chronos as Chronos
 import qualified Chronos as PX
 import qualified Data.Attoparsec.ByteString as AB
+import qualified Data.Attoparsec.ByteString.Lazy as ABL
 
 main :: IO ()
 main = defaultMain tests
@@ -79,7 +81,7 @@ unitTests = testGroup "Unit tests"
       , ValueUid ""
       , ValueClientHostname "000280041D7F"
       ]
-  , testCase "007" $ oneLease "sample/007.txt" $ Lease
+  , testCase "007" $ oneLease' "sample/007.txt" $ pure $ Lease
       (IPv4.fromOctets 10 153 2 77)
       [ ValueStarts $ Chronos.timeFromYmdhms 2015 12 30 8 48 24
       , ValueEnds   $ Chronos.timeFromYmdhms 2015 12 30 8 50 24
@@ -97,6 +99,22 @@ oneLease filename expected = do
   case AB.parseOnly (parser <* AB.endOfInput) bs of
     Left err -> fail ("parse failed with: " ++ err)
     Right actual -> assertEqual "Lease Equality" (LeaseWrap expected) (LeaseWrap actual)
+
+oneLease' :: String -> [Lease] -> Assertion
+oneLease' filename expected = do
+  bs <- BSL.readFile filename
+  case ((decodeLeases bs)) of
+    Left err -> fail ("parse failed with: " ++ err)
+    Right actual -> assertEqual "Lease Equality" (LeaseWraps expected) (LeaseWraps actual)
+
+newtype LeaseWraps = LeaseWraps [Lease]
+  deriving (Show)
+
+instance Eq LeaseWraps where
+  LeaseWraps [] == LeaseWraps [] = True
+  LeaseWraps [] == LeaseWraps _  = False
+  LeaseWraps _  == LeaseWraps [] = False
+  LeaseWraps (x:xs) == LeaseWraps (y:ys) = leaseEq x y && (LeaseWraps xs == LeaseWraps ys)
 
 newtype LeaseWrap = LeaseWrap Lease
   deriving (Show)
