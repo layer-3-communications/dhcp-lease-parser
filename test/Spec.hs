@@ -2,7 +2,8 @@
 
 import Test.Tasty
 import Test.Tasty.HUnit
-import Dhcp.Lease
+import Dhcp.Load
+import Dhcp.Parse
 import Dhcp.Types
 import Data.Monoid
 
