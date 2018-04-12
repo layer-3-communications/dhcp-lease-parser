@@ -5,7 +5,9 @@
 
 module Dhcp.Parse
   ( parser
+  , parserExclude 
   , decodeLeases 
+  , decodeLeasesExclude 
   ) where
 
 import qualified Data.Attoparsec.ByteString.Char8 as AB
@@ -26,8 +28,8 @@ import Dhcp.Types
 import Net.Types
 import Prelude hiding (rem)
 
-parser :: BCParser Lease
-parser = do
+parserExclude :: (IPv4 -> Bool) -> BCParser Lease
+parserExclude t = do
   m <- AB.peekChar
   case m of
     Nothing -> pure $ emptyLease
@@ -37,7 +39,7 @@ parser = do
         _ <- AB.string "lease"
         AB.skipSpace
         ip <- I4.parserUtf8
-        if (notOntRange ip)
+        if (not (t ip))
           then do
             AB.skipSpace
             _ <- AB.char '{'
@@ -58,6 +60,9 @@ parser = do
         NextValueAbsent -> pure vs
         NextValuePresent v -> go (v : vs)
 
+parser :: BCParser Lease
+parser = parserExclude (\_ -> True)
+
 skipField :: BCParser ()
 skipField = do
   _ <- AB.takeTill (== '\n')
@@ -76,15 +81,6 @@ skipFieldMany = do
 
 emptyLease :: Lease
 emptyLease = Lease I4.any []
-
-notOntRange :: IPv4 -> Bool
-notOntRange = not . ontRange
-
-ontRange :: IPv4 -> Bool
-ontRange a = go (I4.toOctets a)
-  where
-    go (_,x,_,_) = (x >= 110 && x <= 119)
-    --(x < 150 || x > 160)
 
 comment :: BCParser ()
 comment = do
@@ -190,6 +186,9 @@ debug psr bs !xs !i = case ALB.parse psr bs of
 
 decodeLeases :: LazyByteString -> Either String [Lease]
 decodeLeases bs = debug parser bs [] 1 
+
+decodeLeasesExclude :: (IPv4 -> Bool) -> LazyByteString -> Either String [Lease]
+decodeLeasesExclude t bs = debug (parserExclude t) bs [] 1
 
 -- | This doesn't actually work yet. It doesn't escape octal codes.
 --parserUid :: BCParser ByteString

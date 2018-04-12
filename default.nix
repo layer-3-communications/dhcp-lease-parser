@@ -1,13 +1,13 @@
-{ package ? "dhcp-lease-parser", compiler ? "ghc822" }:
+{ package ? "dhcp-lease-parser", compiler ? "ghc841" }:
 let fetchNixpkgs = import ./nix/fetchNixpkgs.nix;
     nixpkgs = fetchNixpkgs {
-      rev = "eb857611378576f96022867a9fd15a7a841e518c";
-      sha256 = "02ddlyc2i9l96hsm3l2g02vrv7ljl4h5vbnqfq4p2xvm6zb5v0q6";
-      sha256unpacked = "02ddlyc2i9l96hsm3l2g02vrv7ljl4h5vbnqfq4p2xvm6zb5v0q6";
+      rev = "c484079ac7b4cf003f6b09e64cde59cb9a98b923";
+      sha256 = "0sh4f8w30sya7vydwm86dni1ylz59hiq627df1dv1zg7riq036cw";
+      sha256unpacked = "0fc6y2yjlfbss7cq7lgah0xvlnyas5v3is9r5bxyyp7rkwlyvny4";
     };
     pkgs = import nixpkgs { config = {}; overlays = []; };
     inherit (pkgs) haskell;
-  
+ 
   filterPredicate = p: type:
     let path = baseNameOf p; in !(
        (type == "directory" && path == "dist")
@@ -25,14 +25,11 @@ let fetchNixpkgs = import ./nix/fetchNixpkgs.nix;
     with { cp = file: (self.callPackage (./nix/haskell + "/${file}.nix") {}); 
            build = name: path: self.callCabal2nix name (builtins.filterSource filterPredicate path) {}; 
          };
-
     {
-      mkDerivation = args: super.mkDerivation (args // {
-        doCheck = pkgs.lib.elem args.pname [ "dhcp-lease-parser" ]; 
-        doHaddock = false;
-      });
-      
-      bytestring-encodings = cp "bytestring-encodings"; 
+      ip = dontCheck (cp "ip"); 
+      quickcheck-classes = dontCheck (cp "quickcheck-classes"); 
+      prim-array = dontCheck (cp "prim-array"); 
+      chronos = dontCheck (cp "chronos"); 
       dhcp-lease-parser = build "dhcp-lease-parser" ./.;
     };
   };
