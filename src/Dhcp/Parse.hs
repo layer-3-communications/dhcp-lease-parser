@@ -61,7 +61,29 @@ parserExclude t = do
         NextValuePresent v -> go (v : vs)
 
 parser :: BCParser Lease
-parser = parserExclude (\_ -> True)
+parser = do
+  m <- AB.peekChar
+  case m of
+    Nothing -> pure $ emptyLease
+    Just c  -> if c == '#'
+      then comment >> parser
+      else do 
+        _ <- AB.string "lease"
+        AB.skipSpace
+        ip <- I4.parserUtf8
+        AB.skipSpace
+        _ <- AB.char '{'
+        AB.skipSpace
+        vals <- go []
+        pure (Lease ip vals)
+  where
+    go :: [Value] -> BCParser [Value]
+    go vs = do
+      nv <- parserValue
+      case nv of
+        NextValueAbsent -> pure vs
+        NextValuePresent v -> go (v : vs)
+
 
 skipField :: BCParser ()
 skipField = do
