@@ -32,7 +32,7 @@ parserExclude :: (IPv4 -> Bool) -> BCParser Lease
 parserExclude t = do
   m <- AB.peekChar
   case m of
-    Nothing -> pure $ emptyLease
+    Nothing -> fail "attoparsec peekchar failure"
     Just c  -> if c == '#'
       then comment >> parser
       else do 
