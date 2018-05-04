@@ -1,5 +1,5 @@
 name: dhcp-lease-parser
-version: 0.1.0.0
+version: 0.1.0.1
 homepage: https://github.com/andrewthad/dhcp-lease-parser#readme
 license: BSD3
 license-file: LICENSE
