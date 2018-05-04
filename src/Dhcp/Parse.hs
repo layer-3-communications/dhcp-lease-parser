@@ -84,7 +84,6 @@ parser = do
         NextValueAbsent -> pure vs
         NextValuePresent v -> go (v : vs)
 
-
 skipField :: BCParser ()
 skipField = do
   _ <- AB.takeTill (== '\n')
@@ -184,6 +183,7 @@ parserBindingState :: BCParser BindingState
 parserBindingState =
       (AB.string "active" $> BindingStateActive)
   <|> (AB.string "free"   $> BindingStateFree)
+  <|> (AB.string "abandoned" $> BindingStateAbandoned)
 
 parserTime :: BCParser Time
 parserTime = do

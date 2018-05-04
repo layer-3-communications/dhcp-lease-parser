@@ -72,6 +72,7 @@ data Name
 data BindingState
   = BindingStateFree
   | BindingStateActive
+  | BindingStateAbandoned
   deriving (Eq,Ord,Show,Read)
 
 data Hardware = Hardware

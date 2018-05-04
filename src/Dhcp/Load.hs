@@ -19,13 +19,13 @@ loadLeases :: FilePath -> IO LB.ByteString
 loadLeases filepath = LB.readFile filepath
 
 loadDhcp :: LB.ByteString -> [DT.Lease]
-loadDhcp lbs = either (\str -> fail str) id (decodeLeases lbs)
+loadDhcp lbs = either (\str -> error str) id (decodeLeases lbs)
 
 loadDhcpExclude :: (IPv4 -> Bool) -> LB.ByteString -> [DT.Lease]
 loadDhcpExclude t lbs = either (\str -> fail str) id (decodeLeasesExclude t lbs)
 
 loadDhcpIndexExclude :: (IPv4 -> Bool) -> FilePath -> IO (Mac -> Maybe IPv4)
-loadDhcpIndexExclude t settings = macLookup <$> (loadDhcpExclude t)<$> loadLeases settings
+loadDhcpIndexExclude t settings = macLookup <$> (loadDhcpExclude t) <$> loadLeases settings
 
 macLookupDump :: FilePath -> [DT.Lease] -> IO (Mac -> Maybe IPv4)
 macLookupDump wf leases = do
@@ -33,14 +33,14 @@ macLookupDump wf leases = do
   B.writeFile wf $ B.pack $ show hm
   pure $ flip HM.lookup hm
 
-macLookup :: [DT.Lease] -> (Mac -> Maybe IPv4)
-macLookup leases = flip HM.lookup (leasesToHashMap leases)
-
 loadDhcpIndexDump :: FilePath -> FilePath -> IO (Mac -> Maybe IPv4)
 loadDhcpIndexDump wf settings = do
   bsLeases <- loadLeases settings
   let leases = loadDhcp bsLeases
   macLookupDump wf leases
+
+macLookup :: [DT.Lease] -> (Mac -> Maybe IPv4)
+macLookup leases = flip HM.lookup (leasesToHashMap leases)
 
 loadDhcpIndex :: FilePath -> IO (Mac -> Maybe IPv4)
 loadDhcpIndex settings = macLookup <$> loadDhcp <$> loadLeases settings
