@@ -64,7 +64,7 @@ parser :: BCParser Lease
 parser = do
   m <- AB.peekChar
   case m of
-    Nothing -> pure $ emptyLease
+    Nothing -> fail "Attoparsec.peekchar failure"
     Just c  -> if c == '#'
       then comment >> parser
       else do 
