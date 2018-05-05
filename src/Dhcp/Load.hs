@@ -2,8 +2,9 @@
 
 module Dhcp.Load
   ( loadDhcpIndex
-  , loadDhcpIndexExclude
   , loadDhcpIndexDump 
+  , loadDhcpIndexExclude
+  , loadDhcpIndexExcludeDump 
   ) where
 
 import Chronos.Types (Time)
@@ -22,10 +23,20 @@ loadDhcp :: LB.ByteString -> [DT.Lease]
 loadDhcp lbs = either (\str -> error str) id (decodeLeases lbs)
 
 loadDhcpExclude :: (IPv4 -> Bool) -> LB.ByteString -> [DT.Lease]
-loadDhcpExclude t lbs = either (\str -> fail str) id (decodeLeasesExclude t lbs)
+loadDhcpExclude t lbs = either (\str -> error str) id (decodeLeasesExclude t lbs)
 
 loadDhcpIndexExclude :: (IPv4 -> Bool) -> FilePath -> IO (Mac -> Maybe IPv4)
 loadDhcpIndexExclude t settings = macLookup <$> (loadDhcpExclude t) <$> loadLeases settings
+
+loadDhcpIndexExcludeDump
+  :: FilePath
+  -> (IPv4 -> Bool)
+  -> FilePath
+  -> IO (Mac -> Maybe IPv4)
+loadDhcpIndexExcludeDump wf t settings = do
+  bsLeases <- loadLeases settings
+  let leases = loadDhcpExclude t bsLeases
+  macLookupDump wf leases
 
 macLookupDump :: FilePath -> [DT.Lease] -> IO (Mac -> Maybe IPv4)
 macLookupDump wf leases = do
