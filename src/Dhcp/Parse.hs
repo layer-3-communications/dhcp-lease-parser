@@ -28,6 +28,8 @@ import Dhcp.Types
 import Net.Types
 import Prelude hiding (rem)
 
+-- | Parse a DHCP leases file, ignoring
+-- any lease that does not satisfy the predicate.
 parserExclude :: (IPv4 -> Bool) -> BCParser Lease
 parserExclude t = do
   m <- AB.peekChar
