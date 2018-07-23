@@ -20,10 +20,10 @@ loadLeases :: FilePath -> IO LB.ByteString
 loadLeases filepath = LB.readFile filepath
 
 loadDhcp :: LB.ByteString -> [DT.Lease]
-loadDhcp lbs = either (\str -> error str) id (decodeLeases lbs)
+loadDhcp lbs = either (\_ -> []) id (decodeLeases lbs)
 
 loadDhcpExclude :: (IPv4 -> Bool) -> LB.ByteString -> [DT.Lease]
-loadDhcpExclude t lbs = either (\str -> error str) id (decodeLeasesExclude t lbs)
+loadDhcpExclude t lbs = either (\_ -> []) id (decodeLeasesExclude t lbs)
 
 loadDhcpIndexExclude :: (IPv4 -> Bool) -> FilePath -> IO (Mac -> Maybe IPv4)
 loadDhcpIndexExclude t settings = macLookup <$> (loadDhcpExclude t) <$> loadLeases settings
