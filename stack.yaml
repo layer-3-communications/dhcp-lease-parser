@@ -1,9 +1,0 @@
-resolver: lts-8.14
-packages:
-- '.'
-extra-deps:
-- chronos-0.4
-- ip-0.9
-flags: {}
-extra-package-dbs: []
-
