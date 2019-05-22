@@ -1,8 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BangPatterns #-}
 
-{-# OPTIONS_GHC -Wall #-}
-
 module Dhcp.Types
   ( Lease(..)
   , Value(..)
@@ -11,13 +9,6 @@ module Dhcp.Types
   , Name(..) 
   , NextValue(..)
   , NextName(..)
-  , NextChar(..)
-  , LazyByteString
-  , StrictByteString
-  , CharByteString
-  , StrictText
-  , BCParser 
-  , DhcpStream 
   ) where
 
 import qualified Data.ByteString       as B
@@ -27,18 +18,10 @@ import qualified Data.Text             as T
 import qualified Data.Attoparsec.ByteString.Char8 as AB
 import Net.Types (IPv4, Mac)
 import Chronos.Types (Time)
-import Streaming (Of, Stream)
-
-type LazyByteString   = LB.ByteString
-type StrictByteString =  B.ByteString
-type CharByteString   = BC.ByteString
-type StrictText       =  T.Text
-type BCParser         = AB.Parser
-type DhcpStream       = Stream (Of Lease) (Either String) ()
 
 data Lease = Lease 
   { leaseIp     :: !IPv4
-  , leaseValues :: ![Value]
+  , leaseValues :: [Value]
   } deriving (Show,Read)
 
 data Value 
@@ -50,8 +33,8 @@ data Value
   | ValueBindingState     !BindingState
   | ValueNextBindingState !BindingState
   | ValueHardware         !Hardware
-  | ValueUid              !StrictByteString
-  | ValueClientHostname   !StrictText
+  | ValueUid              !B.ByteString
+  | ValueClientHostname   !T.Text
   deriving (Eq,Ord,Show,Read)
 
 data NextValue = NextValuePresent !Value | NextValueAbsent
@@ -76,9 +59,6 @@ data BindingState
   deriving (Eq,Ord,Show,Read)
 
 data Hardware = Hardware
-  { hardwareType :: !StrictText
+  { hardwareType :: !T.Text
   , hardwareMac  :: !Mac
   } deriving (Eq,Ord,Show,Read)
-
--- useful for parsing, not necessary for dhcp leases
-data NextChar = NextCharAgain {-# UNPACK #-} !Char | NextCharDone

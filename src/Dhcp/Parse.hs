@@ -1,258 +1,214 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BangPatterns #-}
-
-{-# OPTIONS_GHC -Wall #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Dhcp.Parse
-  ( parser
-  , parserExclude 
-  , decodeLeases 
-  , decodeLeasesExclude 
+  ( decodeLeases
+  , leasesToTimedHashMap
+  , leasesToHashMap
+  , TimedIPv4(..)
   ) where
 
-import qualified Data.Attoparsec.ByteString.Char8 as AB
-import qualified Data.Attoparsec.ByteString.Lazy as ALB
-import qualified Net.IPv4 as I4
-import qualified Net.Mac as Mac
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy.Internal as BI
 import Chronos (parserUtf8_YmdHMS, datetimeToTime)
 import Chronos.Types
 import Control.Applicative
 import Data.Attoparsec.ByteString ((<?>))
+import Data.Attoparsec.ByteString.Char8 (Parser)
 import Data.ByteString (ByteString)
 import Data.Functor
+import Data.HashMap.Strict (HashMap)
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8')
 import Dhcp.Types
 import Net.Types
 import Prelude hiding (rem)
+import qualified Data.Attoparsec.ByteString.Char8 as AB
+import qualified Data.Attoparsec.ByteString.Lazy as ALB
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.ByteString.Lazy.Internal as BI
+import qualified Data.HashMap.Strict as HM
+import qualified Net.IPv4 as I4
+import qualified Net.Mac as Mac
 
--- | Parse a DHCP leases file, ignoring
--- any lease that does not satisfy the predicate.
-parserExclude :: (IPv4 -> Bool) -> BCParser Lease
-parserExclude t = do
-  m <- AB.peekChar
-  case m of
-    Nothing -> fail "attoparsec peekchar failure"
-    Just c  -> if c == '#'
-      then comment >> parser
-      else do 
-        _ <- AB.string "lease"
-        AB.skipSpace
-        ip <- I4.parserUtf8
-        if (not (t ip))
-          then do
-            AB.skipSpace
-            _ <- AB.char '{'
-            AB.skipSpace
-            skipFieldMany
-            pure $ emptyLease
-          else do 
-            AB.skipSpace
-            _ <- AB.char '{'
-            AB.skipSpace
-            vals <- go []
-            pure (Lease ip vals)
+data TimedIPv4 = TimedIPv4 {-# UNPACK #-} !IPv4 {-# UNPACK #-} !Time
+
+leasesToHashMap :: [Lease] -> HashMap Mac IPv4
+leasesToHashMap = fmap (\(TimedIPv4 ip _) -> ip) . leasesToTimedHashMap
+
+leasesToTimedHashMap :: [Lease] -> HashMap Mac TimedIPv4
+leasesToTimedHashMap = foldr h HM.empty
   where
-    go :: [Value] -> BCParser [Value]
-    go vs = do
-      nv <- parserValue
-      case nv of
-        NextValueAbsent -> pure vs
-        NextValuePresent v -> go (v : vs)
+  h :: Lease -> HashMap Mac TimedIPv4 -> HashMap Mac TimedIPv4
+  h (Lease ip vals) hm = case findMacAndTime vals of
+    Nothing -> hm
+    Just (mac,time) -> HM.alter g mac hm
+      where
+      g :: Maybe TimedIPv4 -> Maybe TimedIPv4
+      g Nothing = Just (TimedIPv4 ip time)
+      g (Just prevPair@(TimedIPv4 _ prevTime)) = Just $ if time > prevTime
+        then TimedIPv4 ip time
+        else prevPair
 
-parser :: BCParser Lease
-parser = do
-  m <- AB.peekChar
-  case m of
-    Nothing -> fail "Attoparsec.peekchar failure"
-    Just c  -> if c == '#'
-      then comment >> parser
-      else do 
-        _ <- AB.string "lease"
-        AB.skipSpace
-        ip <- I4.parserUtf8
-        AB.skipSpace
-        _ <- AB.char '{'
-        AB.skipSpace
-        vals <- go []
-        pure (Lease ip vals)
+findMacAndTime :: [Value] -> Maybe (Mac,Time)
+findMacAndTime = hasNeither
   where
-    go :: [Value] -> BCParser [Value]
-    go vs = do
-      nv <- parserValue
-      case nv of
-        NextValueAbsent -> pure vs
-        NextValuePresent v -> go (v : vs)
+    hasNeither [] = Nothing
+    hasNeither (v : vs) = case v of
+      ValueStarts t -> hasTime t vs
+      ValueHardware h -> hasMac (hardwareMac h) vs
+      _ -> hasNeither vs
+    hasTime _ [] = Nothing
+    hasTime t (v : vs) = case v of
+      ValueHardware h -> Just (hardwareMac h,t)
+      _ -> hasTime t vs
+    hasMac _ [] = Nothing
+    hasMac m (v : vs) = case v of
+      ValueStarts t -> Just (m,t)
+      _ -> hasMac m vs
 
-skipField :: BCParser ()
-skipField = do
-  _ <- AB.takeTill (== '\n')
-  AB.skipSpace
+ipv4 :: Parser IPv4
+ipv4 = skipSpace *> I4.parserUtf8 <* skipSpace
 
-skipFieldMany :: BCParser ()
-skipFieldMany = do
-  m <- AB.peekChar
-  case m of
-    Nothing -> pure ()
-    Just c  -> if c == '}'
-      then do
-        _ <- AB.char '}'
-        AB.skipSpace 
-      else skipField >> skipFieldMany
+lease :: Parser Lease
+lease = AB.peekChar >>= \case
+  Nothing -> fail $
+    "Attoparsec.peekChar failure: unable to take "
+    ++ "next character when parsing lease file."
+  Just c -> if c == '#'
+    then comment *> lease
+    else pure Lease
+      <* string "lease"
+      <*> ipv4
+      <* leftCurly
+      <* skipSpace
+      <*> go []
+  where
+    go vs = nextValue >>= \case
+      NextValueAbsent -> pure vs
+      NextValuePresent v -> go (v : vs)
 
-emptyLease :: Lease
-emptyLease = Lease I4.any []
+string :: B.ByteString -> Parser ()
+string b = AB.skipSpace *> AB.string b *> AB.skipSpace
 
-comment :: BCParser ()
-comment = do
-  _ <- AB.takeTill (== '\n')
-  AB.skipSpace
+datum :: B.ByteString -> Parser a -> Parser a
+datum b p = string b *> p <* AB.skipSpace
 
-parserValue :: BCParser NextValue
-parserValue = do
-  nname
-     <- (AB.string "starts" $> NextNamePresent NameStarts)
-    <|> (AB.string "ends"   $> NextNamePresent NameEnds)
-    <|> (AB.string "tstp"   $> NextNamePresent NameTstp)
-    <|> (AB.string "atsfp"  $> NextNamePresent NameAtsfp)
-    <|> (AB.string "cltt"   $> NextNamePresent NameCltt)
-    <|> (AB.string "binding state" $> NextNamePresent NameBindingState)
-    <|> (AB.string "next binding state" $> NextNamePresent NameNextBindingState)
-    <|> (AB.string "hardware" $> NextNamePresent NameHardware)
-    <|> (AB.string "uid" $> NextNamePresent NameUid)
-    <|> (AB.string "client-hostname" $> NextNamePresent NameClientHostname)
-    <|> (AB.char '}' $> NextNameAbsent)
-  case nname of
-    NextNameAbsent -> do
-      AB.skipSpace
-      pure NextValueAbsent
-    NextNamePresent name -> do
-      AB.skipSpace
-      value <- case name of
-        NameStarts -> ValueStarts <$> ((parserTime <* semicolon) <?> "starts error")
-        NameEnds   -> ValueEnds   <$> ((parserTime <* semicolon) <?> "ends error")
-        NameTstp   -> ValueTstp   <$> ((parserTime <* semicolon) <?> "tstp error")
-        NameAtsfp  -> ValueAtsfp  <$> ((parserTime <* semicolon) <?> "atsfp error")
-        NameCltt   -> ValueCltt   <$> ((parserTime <* semicolon) <?> "namecltt error")
-        NameBindingState
-                   -> ValueBindingState     <$> ((parserBindingState <* semicolon) <?> "binding state error")
-        NameNextBindingState
-                   -> ValueNextBindingState <$> ((parserBindingState <* semicolon) <?> "next binding state error")
-        NameHardware
-                   -> ValueHardware         <$> ((parserHardware     <* semicolon) <?> "hardware error")
-        NameUid    -> ValueUid              <$> (skipUid <?> "uid error") 
-        NameClientHostname
-                   -> ValueClientHostname   <$> ((parserClientHostname <* semicolon) <?> "hostname error")
-      AB.skipSpace
-      AB.skipSpace
-      pure (NextValuePresent value)
+comment :: Parser ()
+comment = AB.takeTill (== '\n') *> AB.skipSpace
 
-semicolon :: BCParser ()
-semicolon = do
-  _ <- AB.char ';'
-  pure ()
+semicolon :: Parser ()
+semicolon = () <$ AB.char ';'
 
-skipUid :: BCParser ByteString
-skipUid = do
-  _ <- AB.takeTill (== '\n')
-  pure B.empty
+leftCurly :: Parser ()
+leftCurly = () <$ AB.char '{'
 
-parserClientHostname :: BCParser Text
-parserClientHostname = do
+rightCurly :: Parser ()
+rightCurly = () <$ AB.char '}'
+
+skipSpace :: Parser ()
+skipSpace = AB.skipSpace
+
+nextName :: Parser NextName
+nextName = (string "starts" $> NextNamePresent NameStarts)
+  <|> (string "ends" $> NextNamePresent NameEnds)
+  <|> (string "tstp" $> NextNamePresent NameTstp)
+  <|> (string "atsfp" $> NextNamePresent NameAtsfp)
+  <|> (string "cltt" $> NextNamePresent NameCltt)
+  <|> (string "binding state" $> NextNamePresent NameBindingState)
+  <|> (string "next binding state" $> NextNamePresent NameNextBindingState)
+  <|> (string "hardware" $> NextNamePresent NameHardware)
+  <|> (string "uid" $> NextNamePresent NameUid)
+  <|> (string "client-hostname" $> NextNamePresent NameClientHostname)
+  <|> (rightCurly $> NextNameAbsent)
+
+nextValue :: Parser NextValue
+nextValue = nextName >>= \case
+  NextNameAbsent -> AB.skipSpace *> pure NextValueAbsent 
+  NextNamePresent name -> do
+    AB.skipSpace
+    value <- case name of
+      NameStarts -> fmap ValueStarts $
+        ((time <* skipSpace <* semicolon)
+        <?> "failed to parse 'starts' statement")
+      NameEnds -> fmap ValueEnds $
+        ((time <* skipSpace <* semicolon)
+        <?> "failed to parse 'ends' statement")
+      NameTstp -> fmap ValueTstp $
+        ((time <* skipSpace <* semicolon)
+        <?> "failed to parse 'tstp' statement")
+      NameAtsfp -> fmap ValueAtsfp $
+        ((time <* skipSpace <* semicolon)
+        <?> "failed to parse 'atsfp' statement")
+      NameCltt -> fmap ValueCltt $
+        ((time <* skipSpace <* semicolon)
+        <?> "failed to parse 'namecltt' statement")
+      NameBindingState -> fmap ValueBindingState $
+        ((bindingState <* skipSpace <* semicolon)
+        <?> "failed to parse 'binding state' statement")
+      NameNextBindingState -> fmap ValueNextBindingState $
+        ((bindingState <* skipSpace <* semicolon)
+        <?> "failed to parse 'next binding state' statement")
+      NameHardware -> fmap ValueHardware $
+        ((hardware <* skipSpace <* semicolon)
+        <?> "failed to parse 'hardware' statement")
+      NameUid -> fmap ValueUid $
+        (uid <?> "failed to parse 'uid' statement") 
+      NameClientHostname -> fmap ValueClientHostname $
+        ((clientHostname <* skipSpace <* semicolon)
+        <?> "failed to parse 'client-hostname' statement")
+    skipSpace
+    skipSpace
+    pure (NextValuePresent value)
+
+uid :: Parser ByteString
+uid = B.empty <$ AB.takeTill (== '\n')
+
+clientHostname :: Parser Text
+clientHostname = do
   _ <- AB.char '"'
   bs <- AB.takeTill (== '"')
   _ <- AB.anyChar
   case decodeUtf8' bs of
-    Left _ -> fail "client hostname name not UTF-8"
+    Left _ -> fail "client hostname not UTF-8"
     Right name -> pure name
 
-parserHardware :: BCParser Hardware
-parserHardware = Hardware
-  <$> (do
-        bs <- AB.takeWhile1 (/= ' ')
-        case decodeUtf8' bs of
-          Left _ -> fail "hardware name not UTF-8"
-          Right name -> pure name
-      ) 
-  <*  AB.anyChar
-  <*> 
-    ((Mac.parserWithUtf8 (MacCodec (MacGroupingPairs ':') False))
-    <|> (pure $ Mac.fromOctets 0 0 0 0 0 0))
+hardware :: Parser Hardware
+hardware = Hardware
+  <$> (AB.takeWhile1 (/= ' ') >>= \bs -> case decodeUtf8' bs of
+         Left _ -> fail "hardware name not UTF-8"
+         Right name -> pure name
+      )
+  <* AB.anyChar
+  <*> (Mac.parserWithUtf8 (MacCodec (MacGroupingPairs ':') False))
 
-parserBindingState :: BCParser BindingState
-parserBindingState =
-      (AB.string "active" $> BindingStateActive)
-  <|> (AB.string "free"   $> BindingStateFree)
-  <|> (AB.string "abandoned" $> BindingStateAbandoned)
+bindingState :: Parser BindingState
+bindingState = (string "active" $> BindingStateActive)
+  <|> (string "free" $> BindingStateFree)
+  <|> (string "abandoned" $> BindingStateAbandoned)
 
-parserTime :: BCParser Time
-parserTime = do
-  _ <- AB.decimal :: BCParser Int
-  AB.skipSpace
-  dt <- parserUtf8_YmdHMS (DatetimeFormat (Just '/') (Just ' ') (Just ':'))
-  pure (datetimeToTime dt)
+time :: Parser Time
+time = pure datetimeToTime
+  <* AB.decimal
+  <* AB.skipSpace
+  <*> parserUtf8_YmdHMS (DatetimeFormat (Just '/') (Just ' ') (Just ':'))
 
-debug :: BCParser a -> LazyByteString -> [a] -> Int -> Either String [a]
-debug psr bs !xs !i = case ALB.parse psr bs of
+-- | Either returns what it was able to parse thus far, plus an error message,
+--   or just everything parsed
+debug :: Parser a -> BL.ByteString -> [a] -> Int -> Either ([a],String) [a]
+debug psr bs xs !i = case ALB.parse psr bs of
+  ALB.Done (BI.Empty) r -> Right (r:xs)
+  ALB.Done rem r -> debug psr rem (r:xs) (i+1)
   ALB.Fail _ ss s ->
-    Left $ "failed at lease number: " ++ (show $ (\x -> if x > 6 then x - 6 else x) i)
-      ++ "\n\t(n.b.: this number is 1-indexed)" 
-      ++ "\nOriginal error message Attoparsec: " ++ s
-      ++ "\nContextual error messages from Attoparsec: " ++ (showStrs ss 0)
-  ALB.Done (BI.Empty) r -> Right (r : xs) 
-  ALB.Done rem r        -> debug psr rem (r : xs) (i + 1)
-  where
-    showStrs :: [String] -> Int -> String
-    showStrs [] _ = ""
-    showStrs (k:ks) n = "\nContext " ++ (show n) ++ " " ++ k ++ showStrs ks (n + 1)
+    let showStrs [] _ = ""
+        showStrs (c:cs) n = "\n    Context " ++ show n ++ ": " ++ c
+          ++ showStrs cs (n+1)
+        errMsg = "failed at least number: "
+          ++ show (if i > 6 then i - 6 else i)
+          ++ "\n  (n.b.: This number is 1-indexed)"
+          ++ "\n  Original error message from attoparsec: " ++ s
+          ++ "\n  Contextual error message from attoparsec: " ++ showStrs ss 0
+    in Left (xs,errMsg)
 
-decodeLeases :: LazyByteString -> Either String [Lease]
-decodeLeases bs = debug parser bs [] 1 
-
-decodeLeasesExclude :: (IPv4 -> Bool) -> LazyByteString -> Either String [Lease]
-decodeLeasesExclude t bs = debug (parserExclude t) bs [] 1
-
--- | This doesn't actually work yet. It doesn't escape octal codes.
---parserUid :: BCParser ByteString
---parserUid = do
---  isMac <- (AB.char '"' $> False ) <|> pure True
---  if isMac
---    then AB.takeTill (\x -> not (x == ':' || (x >= '0' && x <= '9') || (x >= 'a' && x <= 'f') || (x >= 'A' && x <= 'F')))
---    else do
---    _ <- AB.takeTill (== '\n')
---    AB.skipSpace
---    pure B.empty
---    --do
---    --  let go !cs = do
---    --        n <- possiblyOctal
---    --        case n of
---    --          NextCharDone -> pure cs
---    --          NextCharAgain c -> go (c : cs)
---    --  chars <- go []
---    --  pure (B.reverse (BC.pack chars))
---
---octalErrorMessage :: String
---octalErrorMessage = "invalid octal escape sequence while parsing uid"
-
---c2i :: Char -> Int
---c2i = ord
-
---possiblyOctal :: BCParser NextChar
---possiblyOctal = do
---  c <- AB.anyChar
---  case c of
---    '"' -> pure NextCharDone
---    '\\' -> do
---      c1 <- AB.anyChar
---      let i1 = c2i c1 - 48
---      when (i1 < 0 || i1 > 3) $ fail octalErrorMessage
---      c2 <- AB.anyChar
---      let i2 = c2i c2 - 48
---      when (i2 < 0 || i2 > 7) $ fail octalErrorMessage
---      c3 <- AB.anyChar
---      let i3 = c2i c3 - 48
---      when (i3 < 0 || i3 > 7) $ fail octalErrorMessage
---      pure (NextCharAgain (chr (i1 * 64 + i2 * 8 + i3)))
---    _ -> pure (NextCharAgain c)
+decodeLeases :: BL.ByteString -> Either ([Lease],String) [Lease]
+decodeLeases bs = debug lease bs [] 1
