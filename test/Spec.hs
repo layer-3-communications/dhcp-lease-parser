@@ -1,5 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+module Main (main) where
+
+{-
 import Test.Tasty
 import Test.Tasty.HUnit
 import Dhcp.Load
@@ -16,113 +19,48 @@ import qualified Chronos as Chronos
 import qualified Chronos as PX
 import qualified Data.Attoparsec.ByteString as AB
 import qualified Data.Attoparsec.ByteString.Lazy as ABL
+-}
+
+import Dhcp.Types
+import Dhcp.Parse
+import Leases
+import Test.Tasty
+import Test.Tasty.HUnit
+
+import qualified Data.ByteString.Lazy as BL
 
 main :: IO ()
-main = defaultMain tests
+main = defaultMain $
+  testGroup "Tests" [unitTests]
 
-tests :: TestTree
-tests = testGroup "Tests" [unitTests]
+numEach :: ()
+  => Int -- ^ number of expected errors
+  -> Int -- ^ number of expected successes
+  -> ([LeaseError], [Lease])
+  -> Assertion
+numEach expectedErrs expectedLeases (errs,leases) =
+  let actualErrs = length errs
+      actualLeases = length leases
+      msg = mconcat
+        [ "number of expected errors: " <> show expectedErrs <> "\n"
+        , "number of actual errors:   " <> show actualErrs <> "\n\n"
+        , "number of expected successes: " <> show expectedLeases <> "\n"
+        , "number of actual successes: " <> show actualLeases <> "\n"
+        ]
+   in assertBool msg (expectedErrs == actualErrs && expectedLeases == actualLeases)
+
+oneLease = numEach 0 1
 
 unitTests :: TestTree
 unitTests = testGroup "Unit tests"
-  [ testCase "000" $ oneLease "sample/000.txt" $ Lease
-      (IPv4.fromOctets 10 160 23 253)
-      [ ValueStarts $ Chronos.timeFromYmdhms 2016 1 11 18 31 21
-      , ValueEnds   $ Chronos.timeFromYmdhms 2016 02 08 18 38 1
-      , ValueTstp   $ Chronos.timeFromYmdhms 2016 02 08 18 38 1
-      , ValueBindingState BindingStateFree
-      , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0x00 0x02 0x80 0x05 0x3E 0x9A
-      ]
-  , testCase "001" $ oneLease "sample/001.txt" $ Lease
-      (IPv4.fromOctets 10 152 33 140)
-      [ ValueStarts $ Chronos.timeFromYmdhms 2017 5 18 14 05 18
-      , ValueEnds   $ Chronos.timeFromYmdhms 2017 06 15 14 11 58
-      , ValueBindingState BindingStateActive
-      , ValueNextBindingState BindingStateFree
-      , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0x00 0x02 0x80 0x04 0x30 0x63
-      , ValueUid $ ""
-      , ValueClientHostname "000280043063"
-      ]
-  , testCase "002" $ oneLease "sample/002.txt" $ Lease
-      (IPv4.fromOctets 10 102 18 226)
-      [ ValueStarts $ Chronos.timeFromYmdhms 2017 5 18 5 40 43
-      , ValueEnds   $ Chronos.timeFromYmdhms 2017 05 19 0 40 43
-      , ValueBindingState BindingStateActive
-      , ValueNextBindingState BindingStateFree
-      , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0x00 0x02 0xA1 0x23 0x03 0x80
-      , ValueUid ""
-      ]
---  , testCase "003" $ oneLease "sample/003.txt" $ Lease
---      (IPv4.fromOctets 10 160 22 231)
---      [ ValueStarts $ Chronos.timeFromYmdhms 2018 02 21 23 52 59
---      , ValueEnds   $ Chronos.timeFromYmdhms 2018 03 21 23 59 39
---      , ValueBindingState BindingStateActive
---      , ValueNextBindingState BindingStateFree
---      , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0x00 0x02 0x80 0x04 0x34 0xe8
---      , ValueUid ""
---      , ValueClientHostname "0002800434E8"
---      ]
-  , testCase "004" $ oneLease "sample/004.txt" $ Lease
-      (IPv4.fromOctets 10 160 22 225)
-      [ ValueStarts $ Chronos.timeFromYmdhms 2018 02 21 23 52 59
-      , ValueEnds   $ Chronos.timeFromYmdhms 2018 03 21 23 59 39
-      , ValueBindingState BindingStateActive
-      , ValueNextBindingState BindingStateFree
-      , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0x00 0x02 0x80 0x04 0x3b 0x39
-      , ValueUid ""
-      , ValueClientHostname "000280043B39"
-      ]
-  , testCase "005" $ oneLease "sample/005.txt" $ Lease
-      (IPv4.fromOctets 10 160 22 227)
-      [ ValueStarts $ Chronos.timeFromYmdhms 2018 02 26 17 18 08
-      , ValueEnds   $ Chronos.timeFromYmdhms 2018 03 26 17 24 48
-      , ValueBindingState BindingStateActive
-      , ValueNextBindingState BindingStateFree
-      , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0x00 0x02 0x80 0x04 0x1d 0x7f
-      , ValueUid ""
-      , ValueClientHostname "000280041D7F"
-      ]
-  , testCase "007" $ oneLease' "sample/007.txt" $ pure $ Lease
-      (IPv4.fromOctets 10 153 2 77)
-      [ ValueStarts $ Chronos.timeFromYmdhms 2015 12 30 8 48 24
-      , ValueEnds   $ Chronos.timeFromYmdhms 2015 12 30 8 50 24
-      , ValueTstp   $ Chronos.timeFromYmdhms 2015 12 30 8 50 24
-      , ValueBindingState BindingStateFree
-      , ValueHardware $ Hardware "ethernet" $ Mac.fromOctets 0 0 0 0 0 0
-      , ValueUid ""
-      , ValueClientHostname "000280045079"
-      ]
+  [ testCase "lease0" $ oneLease $ decodeLeases lease0
+  , testCase "lease1" $ oneLease $ decodeLeases lease1
+  , testCase "lease2" $ oneLease $ decodeLeases lease2
+  , testCase "lease3" $ oneLease $ decodeLeases lease3
+  , testCase "lease4" $ oneLease $ decodeLeases lease4
+  , testCase "lease5" $ oneLease $ decodeLeases lease5
+  , testCase "lease6" $ oneLease $ decodeLeases lease6
+  , testCase "lease7" $ oneLease $ decodeLeases lease7
+  , testCase "lease8" $ numEach 0 2 $ decodeLeases lease8
+  , testCase "lease9" $ numEach 1 1 $ decodeLeases lease9
   ]
-
-oneLease :: String -> Lease -> Assertion
-oneLease filename expected = do
-  bs <- B.readFile filename
-  case AB.parseOnly (parser <* AB.endOfInput) bs of
-    Left err -> fail ("parse failed with: " ++ err)
-    Right actual -> assertEqual "Lease Equality" (LeaseWrap expected) (LeaseWrap actual)
-
-oneLease' :: String -> [Lease] -> Assertion
-oneLease' filename expected = do
-  bs <- BSL.readFile filename
-  case ((decodeLeases bs)) of
-    Left err -> fail ("parse failed with: " ++ err)
-    Right actual -> assertEqual "Lease Equality" (LeaseWraps expected) (LeaseWraps actual)
-
-newtype LeaseWraps = LeaseWraps [Lease]
-  deriving (Show)
-
-instance Eq LeaseWraps where
-  LeaseWraps [] == LeaseWraps [] = True
-  LeaseWraps [] == LeaseWraps _  = False
-  LeaseWraps _  == LeaseWraps [] = False
-  LeaseWraps (x:xs) == LeaseWraps (y:ys) = leaseEq x y && (LeaseWraps xs == LeaseWraps ys)
-
-newtype LeaseWrap = LeaseWrap Lease
-  deriving (Show)
-
-instance Eq LeaseWrap where
-  LeaseWrap a == LeaseWrap b = leaseEq a b
-
-leaseEq :: Lease -> Lease -> Bool
-leaseEq (Lease ipA valsA) (Lease ipB valsB) =
-  ipA == ipB && L.sort valsA == L.sort valsB

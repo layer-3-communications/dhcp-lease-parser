@@ -7,6 +7,7 @@ module Dhcp.Parse
   , leasesToTimedHashMap
   , leasesToHashMap
   , TimedIPv4(..)
+  , LeaseError(..)
   ) where
 
 import Chronos (parserUtf8_YmdHMS, datetimeToTime)
@@ -32,6 +33,7 @@ import qualified Net.IPv4 as I4
 import qualified Net.Mac as Mac
 
 data TimedIPv4 = TimedIPv4 {-# UNPACK #-} !IPv4 {-# UNPACK #-} !Time
+  deriving (Eq,Ord,Show,Read)
 
 leasesToHashMap :: [Lease] -> HashMap Mac IPv4
 leasesToHashMap = fmap (\(TimedIPv4 ip _) -> ip) . leasesToTimedHashMap
@@ -193,22 +195,38 @@ time = pure datetimeToTime
   <* AB.skipSpace
   <*> parserUtf8_YmdHMS (DatetimeFormat (Just '/') (Just ' ') (Just ':'))
 
+-- | A 'LeaseError' is the lease on which a ParseError occurred,
+--   and an error message.
+data LeaseError = LeaseError !Int String
+  deriving (Eq,Ord,Show,Read)
+
 -- | Either returns what it was able to parse thus far, plus an error message,
 --   or just everything parsed
-debug :: Parser a -> BL.ByteString -> [a] -> Int -> Either ([a],String) [a]
-debug psr bs xs !i = case ALB.parse psr bs of
-  ALB.Done (BI.Empty) r -> Right (r:xs)
-  ALB.Done rem r -> debug psr rem (r:xs) (i+1)
-  ALB.Fail _ ss s ->
-    let showStrs [] _ = ""
-        showStrs (c:cs) n = "\n    Context " ++ show n ++ ": " ++ c
-          ++ showStrs cs (n+1)
-        errMsg = "failed at least number: "
-          ++ show (if i > 6 then i - 6 else i)
+debug :: BL.ByteString -> [LeaseError] -> [Lease] -> Int -> ([LeaseError],[Lease])
+debug b errs ls !i = case ALB.parse lease b of
+  ALB.Done (BI.Empty) r -> (errs, (r:ls))
+  ALB.Done rem r -> debug rem errs (r:ls) (i+1)
+  ALB.Fail rem ctxs errMsg ->
+    let showCtxs [] _ = ""
+        showCtxs (c:cs) n = "\n    Context "
+          ++ show n
+          ++ ": "
+          ++ c
+          ++ showCtxs cs (n+1)
+        leaseError = "failed at least number: "
+          ++ show i
           ++ "\n  (n.b.: This number is 1-indexed)"
-          ++ "\n  Original error message from attoparsec: " ++ s
-          ++ "\n  Contextual error message from attoparsec: " ++ showStrs ss 0
-    in Left (xs,errMsg)
+          ++ "\n  Original error message from attoparsec: " ++ errMsg
+          ++ "\n  Contextual error message from attoparsec: " ++ showCtxs ctxs 0
+    in case ALB.parse untilRightCurly rem of
+      ALB.Done (BI.Empty) () -> (LeaseError i leaseError : errs, ls)
+      ALB.Done rem' () -> debug rem' (LeaseError i leaseError : errs) ls (i+1)
+      ALB.Fail _ _ _ ->
+        let err = "Failed to move on to next lease, after a lease parsefailure"
+        in (LeaseError i err : LeaseError i leaseError : errs, ls)
 
-decodeLeases :: BL.ByteString -> Either ([Lease],String) [Lease]
-decodeLeases bs = debug lease bs [] 1
+decodeLeases :: BL.ByteString ->([LeaseError],[Lease])
+decodeLeases b = debug b [] [] 1
+
+untilRightCurly :: Parser ()
+untilRightCurly = AB.takeTill (== '}') *> rightCurly *> skipSpace
