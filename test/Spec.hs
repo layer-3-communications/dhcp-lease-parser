@@ -63,4 +63,5 @@ unitTests = testGroup "Unit tests"
   , testCase "lease7" $ oneLease $ decodeLeases lease7
   , testCase "lease8" $ numEach 0 2 $ decodeLeases lease8
   , testCase "lease9" $ numEach 1 1 $ decodeLeases lease9
+  , testCase "lease10" $ numEach 1 3 $ decodeLeases lease10
   ]

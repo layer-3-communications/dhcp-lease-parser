@@ -131,6 +131,8 @@ lease8 = tb $
   |]
 lease9 = tb $
   [text|
+  # the first lease should fail due to an invalid mac
+  # address, however the second lease should succeed.
   lease 10.153.2.77 {
     starts 3 2015/12/30 08:48:24;
     ends 3 2015/12/30 08:50:24;
@@ -150,5 +152,43 @@ lease9 = tb $
     client-hostname "000280045079";
   }
   |]
-
+lease10 = tb $
+  [text|
+  lease 10.153.2.77 {
+    starts 3 2015/12/30 08:48:24;
+    ends 3 2015/12/30 08:50:24;
+    tstp 3 2015/12/30 08:50:24;
+    binding state free;
+    hardware ethernet 00:00:00:00:00:00;
+    uid "";
+    client-hostname "000280045079";
+  }
+  lease 10.153.2.79 {
+    starts 3 2015/12/30 08:48:24;
+    ends 3 2015/12/30 08:50:24;
+    tstp 3 2015/12/30 08:50:24;
+    binding state free;
+    hardware ethernet 00:00:00:00:00:00;
+    uid "";
+    client-hostname "000280045079";
+  }
+  lease 10.153.2.78 {
+    starts 3 2015/12/30 08:48:24;
+    ends 3 2015/12/30 08:50:24;
+    tstp 3 2015/12/30 08:50:24;
+    binding state free;
+    hardware ethernet 00:00:00:00;
+    uid "";
+    client-hostname "000280045079";
+  }
+  lease 10.153.2.77 {
+    starts 3 2015/12/30 08:48:24;
+    ends 3 2015/12/30 08:50:24;
+    tstp 3 2015/12/30 08:50:24;
+    binding state free;
+    hardware ethernet 00:00:00:00:00:00;
+    uid "";
+    client-hostname "000280045079";
+  }
+  |]
 
