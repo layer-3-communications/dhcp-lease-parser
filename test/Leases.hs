@@ -229,3 +229,30 @@ lease12 = tb $
     uid "\001\000\002\241%\220\240";
   }
   |]
+lease13 = tb $
+  [text|
+  lease 10.109.68.237 {
+    starts 2 2019/05/28 10:39:36;
+    ends 3 2019/05/29 05:39:36;
+    binding state active;
+    next binding state free;
+    hardware ethernet 00:02:a1:25:90:a0;
+    uid "\001\000\002\241%\220\240";
+  }
+  lease 10.109.66.32 {
+    starts 3 2018/10/31 13:53:08;
+    ends 4 2018/11/01 08:52:38;
+    tstp 4 2018/11/01 08:52:38;
+    binding state free;
+    hardware ethernet 00:02:a1:25:90:a0;
+    uid "\001\000\002\241%\220\240";
+  }
+  lease 10.109.69.123 {
+    starts 2 2017/11/21 15:30:22;
+    ends 3 2017/11/22 10:29:51;
+    tstp 3 2017/11/22 10:29:51;
+    binding state free;
+    hardware ethernet 00:02:a1:25:90:a0;
+    uid "\001\000\002\241%\220\240";
+  }
+  |]

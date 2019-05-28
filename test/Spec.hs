@@ -100,4 +100,5 @@ unitTests = testGroup "Unit tests"
   , testCase "lease10" $ numEach 1 3 $ decodeLeases lease10
   , testCase "lease11" $ mostRecent (Mac.fromOctets 0x0 0x02 0xa1 0x25 0x90 0xa0) $ (snd $ decodeLeases lease11)
   , testCase "lease12" $ mostRecent (Mac.fromOctets 0x0 0x02 0xa1 0x25 0x90 0xa0) $ (snd $ decodeLeases lease12)
+  , testCase "lease13" $ mostRecent (Mac.fromOctets 0x0 0x02 0xa1 0x25 0x90 0xa0) $ (snd $ decodeLeases lease13)
   ]
