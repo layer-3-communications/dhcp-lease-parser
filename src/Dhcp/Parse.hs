@@ -6,6 +6,7 @@ module Dhcp.Parse
   ( decodeLeases
   , leasesToTimedHashMap
   , leasesToHashMap
+  , findMacAndTime
   , TimedIPv4(..)
   , LeaseError(..)
   ) where
@@ -126,7 +127,7 @@ nextName = (string "starts" $> NextNamePresent NameStarts)
 
 nextValue :: Parser NextValue
 nextValue = nextName >>= \case
-  NextNameAbsent -> AB.skipSpace *> pure NextValueAbsent 
+  NextNameAbsent -> AB.skipSpace *> pure NextValueAbsent
   NextNamePresent name -> do
     AB.skipSpace
     value <- case name of
@@ -155,7 +156,7 @@ nextValue = nextName >>= \case
         ((hardware <* skipSpace <* semicolon)
         <?> "failed to parse 'hardware' statement")
       NameUid -> fmap ValueUid $
-        (uid <?> "failed to parse 'uid' statement") 
+        (uid <?> "failed to parse 'uid' statement")
       NameClientHostname -> fmap ValueClientHostname $
         ((clientHostname <* skipSpace <* semicolon)
         <?> "failed to parse 'client-hostname' statement")

@@ -191,4 +191,41 @@ lease10 = tb $
     client-hostname "000280045079";
   }
   |]
-
+lease11 = tb $
+  [text|
+  lease 10.109.69.123 {
+    starts 2 2017/11/21 15:30:22;
+    ends 3 2017/11/22 10:29:51;
+    tstp 3 2017/11/22 10:29:51;
+    binding state free;
+    hardware ethernet 00:02:a1:25:90:a0;
+    uid "\001\000\002\241%\220\240";
+  }
+  lease 10.109.68.237 {
+    starts 2 2019/05/28 10:39:36;
+    ends 3 2019/05/29 05:39:36;
+    binding state active;
+    next binding state free;
+    hardware ethernet 00:02:a1:25:90:a0;
+    uid "\001\000\002\241%\220\240";
+  }
+  |]
+lease12 = tb $
+  [text|
+  lease 10.109.68.237 {
+    starts 2 2019/05/28 10:39:36;
+    ends 3 2019/05/29 05:39:36;
+    binding state active;
+    next binding state free;
+    hardware ethernet 00:02:a1:25:90:a0;
+    uid "\001\000\002\241%\220\240";
+  }
+  lease 10.109.69.123 {
+    starts 2 2017/11/21 15:30:22;
+    ends 3 2017/11/22 10:29:51;
+    tstp 3 2017/11/22 10:29:51;
+    binding state free;
+    hardware ethernet 00:02:a1:25:90:a0;
+    uid "\001\000\002\241%\220\240";
+  }
+  |]

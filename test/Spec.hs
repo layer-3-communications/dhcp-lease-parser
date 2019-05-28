@@ -1,37 +1,71 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Main (main) where
 
-{-
-import Test.Tasty
-import Test.Tasty.HUnit
-import Dhcp.Load
+import Chronos (Time(..))
+import Data.Semigroup (Max(..))
 import Dhcp.Parse
 import Dhcp.Types
-import Data.Monoid
-
-import qualified Data.List as L
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as BSL
-import qualified Net.IPv4 as IPv4
-import qualified Net.Mac as Mac
-import qualified Chronos as Chronos
-import qualified Chronos as PX
-import qualified Data.Attoparsec.ByteString as AB
-import qualified Data.Attoparsec.ByteString.Lazy as ABL
--}
-
-import Dhcp.Types
-import Dhcp.Parse
 import Leases
+import Net.Types (Mac, IPv4)
 import Test.Tasty
 import Test.Tasty.HUnit
 
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.List as L
+import qualified Data.HashMap.Strict as HM
+import qualified Net.Mac as Mac
 
 main :: IO ()
 main = defaultMain $
   testGroup "Tests" [unitTests]
+
+deriving instance Bounded Time
+
+mostRecent :: ()
+  => Mac
+  -> [Lease]
+  -> Assertion
+mostRecent mac leases = case mostRecentDebug mac leases of
+  Left err -> assertBool ("Most Recent IPv4 not retrieved by leasesToTimedHashMap.\n" <> err) False
+  Right () -> assertBool "shouldn't show up" True
+
+-- test that when a collision occurs, we get the most recent IPv4
+mostRecentDebug :: ()
+  => Mac
+  -> [Lease]
+  -> Either String ()
+mostRecentDebug mac leases =
+  let biggestIp = findMostRecentIp leases
+      whatISay = HM.lookup mac (leasesToTimedHashMap leases)
+   in case (biggestIp,whatISay) of
+        (Nothing,Nothing) -> Left
+          $ "Biggest IPv4 resulted in a Nothing.\n"
+          <> "WhatISay resulted in a Nothing.\n"
+        (l,Nothing) -> Left
+          $ "Biggest IPv4 is: " <> show l <> ".\n"
+          <> "WhatISay resulted in a Nothing.\n"
+        (Nothing,r) -> Left
+          $ "Biggest IPv4 resulted in a Nothing.\n"
+          <> "WhatISay is: " <> show r <> ".\n"
+        (Just l, Just r) -> if l == r
+          then Right ()
+          else Left $
+            "Biggest IPv4 \\neq WhatISay.\n"
+            <> "Biggest IPv4: " <> show l <> ".\n"
+            <> "WhatISay: " <> show r <> ".\n"
+  where
+    findMostRecentIp [] = Nothing
+    findMostRecentIp xs = Just $ L.last . L.sortBy s . foldr h [] $ xs
+    h :: Lease -> [TimedIPv4] -> [TimedIPv4]
+    h (Lease ip vals) tm = case findMacAndTime vals of
+      Nothing -> tm
+      Just (mac,time) -> (TimedIPv4 ip time : tm)
+    s :: TimedIPv4 -> TimedIPv4 -> Ordering
+    s (TimedIPv4 _ t1) (TimedIPv4 _ t2) = compare t1 t2
 
 numEach :: ()
   => Int -- ^ number of expected errors
@@ -64,4 +98,6 @@ unitTests = testGroup "Unit tests"
   , testCase "lease8" $ numEach 0 2 $ decodeLeases lease8
   , testCase "lease9" $ numEach 1 1 $ decodeLeases lease9
   , testCase "lease10" $ numEach 1 3 $ decodeLeases lease10
+  , testCase "lease11" $ mostRecent (Mac.fromOctets 0x0 0x02 0xa1 0x25 0x90 0xa0) $ (snd $ decodeLeases lease11)
+  , testCase "lease12" $ mostRecent (Mac.fromOctets 0x0 0x02 0xa1 0x25 0x90 0xa0) $ (snd $ decodeLeases lease12)
   ]
