@@ -6,6 +6,7 @@
 module Main (main) where
 
 import Chronos (Time(..))
+import Data.Bifunctor (second)
 import Data.Semigroup (Max(..))
 import Dhcp.Parse
 import Dhcp.Types
@@ -18,6 +19,7 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.List as L
 import qualified Data.HashMap.Strict as HM
 import qualified Net.Mac as Mac
+import qualified Net.IPv4 as IPv4
 
 main :: IO ()
 main = defaultMain $
@@ -98,7 +100,14 @@ unitTests = testGroup "Unit tests"
   , testCase "lease8" $ numEach 0 2 $ decodeLeases lease8
   , testCase "lease9" $ numEach 1 1 $ decodeLeases lease9
   , testCase "lease10" $ numEach 1 3 $ decodeLeases lease10
-  , testCase "lease11" $ mostRecent (Mac.fromOctets 0x0 0x02 0xa1 0x25 0x90 0xa0) $ (snd $ decodeLeases lease11)
-  , testCase "lease12" $ mostRecent (Mac.fromOctets 0x0 0x02 0xa1 0x25 0x90 0xa0) $ (snd $ decodeLeases lease12)
-  , testCase "lease13" $ mostRecent (Mac.fromOctets 0x0 0x02 0xa1 0x25 0x90 0xa0) $ (snd $ decodeLeases lease13)
+  , testCase "lease11" $ mostRecent exMacA $ (snd $ decodeLeases lease11)
+  , testCase "lease12" $ mostRecent exMacA $ (snd $ decodeLeases lease12)
+  , testCase "lease13a" $ mostRecent exMacA $ (snd $ decodeLeases lease13)
+  , testCase "lease13b" $
+    ([],HM.singleton exMacA (IPv4.fromOctets 10 109 68 237))
+    @=?
+    (second leasesToHashMap (decodeLeases lease13))
   ]
+
+exMacA :: Mac
+exMacA = Mac.fromOctets 0x0 0x02 0xa1 0x25 0x90 0xa0
