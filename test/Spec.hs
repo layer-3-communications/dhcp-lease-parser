@@ -25,8 +25,6 @@ main :: IO ()
 main = defaultMain $
   testGroup "Tests" [unitTests]
 
-deriving instance Bounded Time
-
 mostRecent :: ()
   => Mac
   -> [Lease]
